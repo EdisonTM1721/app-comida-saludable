@@ -1,0 +1,28 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "appemprendedores-b1f30",
+          "appId": "1:373215790658:android:c4908a4c655a25a5180fdb",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "appemprendedores-b1f30",
+          "configurations": {
+            "android": "1:373215790658:android:c4908a4c655a25a5180fdb",
+            "ios": "1:373215790658:ios:f4c8623f44d50f82180fdb"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "database": "(default)",
+    "location": "nam5",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  }
+}
