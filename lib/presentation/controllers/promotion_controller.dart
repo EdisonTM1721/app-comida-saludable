@@ -1,125 +1,113 @@
-import 'package:emprendedor/data/models/promotion_model.dart';
-import 'package:emprendedor/data/repositories/promotion_repository.dart';
 import 'package:flutter/material.dart';
-import 'package:logging/logging.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:emprendedor/data/models/promotion_model.dart';
 import 'package:emprendedor/data/models/coupon_model.dart';
 
-// Clase para el controlador de promociones
-class PromotionController with ChangeNotifier {
-  final Logger _logger = Logger('PromotionController');
-  final PromotionRepository _promotionRepository = PromotionRepository();
-  List<PromotionModel> _promotions = [];
-  bool _isLoading = false;
-  String? _errorMessage;
+// El controlador ahora acepta el userId en su constructor
+class PromotionController extends ChangeNotifier {
+  final String userId;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Getters
+  // Lista de promociones
+  List<PromotionModel> _promotions = [];
   List<PromotionModel> get promotions => _promotions;
+
+  bool _isLoading = false;
   bool get isLoading => _isLoading;
+
+  String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
-  PromotionController() {
+  // Constructor que recibe el userId
+  PromotionController({required this.userId}) {
     fetchPromotions();
   }
 
-  // Métodos para interactuar con la base de datos
-  Stream<List<PromotionModel>> get promotionsStream =>
-      _promotionRepository.getPromotions();
-
-  // Métodos para interactuar con la interfaz de usuario
+  // Método para obtener las promociones del usuario desde Firestore
   Future<void> fetchPromotions() async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
-    // Suscripción al stream de promociones
-    _promotionRepository.getPromotions().listen((promos) {
-      _promotions = promos;
-      _isLoading = false;
-      notifyListeners();
-    }, onError: (error, stackTrace) {
-      _logger.severe("Error fetching promotions", error, stackTrace);
-      _errorMessage = "No se pudieron cargar las promociones.";
-      _isLoading = false;
-      notifyListeners();
-    });
-  }
-
-  // Métodos para interactuar con la base de datos
-  Future<bool> createPromotion(PromotionModel promotion) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
     try {
-      await _promotionRepository.createPromotion(promotion);
-      _logger.info("Promotion '${promotion.name}' created successfully.");
-      await fetchPromotions();
-      return true;
-    } catch (e, stackTrace) {
-      _logger.severe('Error creating promotion "${promotion.name}"', e, stackTrace);
-      _errorMessage = 'No se pudo crear la promoción.';
-      return false;
+      final promotionCollection = _firestore.collection('promotions').doc(userId).collection('user_promotions');
+      final querySnapshot = await promotionCollection.get();
+
+      _promotions = querySnapshot.docs
+          .map((doc) => PromotionModel.fromFirestore(doc))
+          .toList();
+    } on FirebaseException catch (e) {
+      _errorMessage = 'Error de Firebase: ${e.message}';
+      _promotions = [];
+    } catch (e) {
+      _errorMessage = 'Error inesperado: $e';
+      _promotions = [];
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // Métodos para interactuar con la base de datos
-  Future<bool> updatePromotion(PromotionModel promotion) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
+  // Método para crear o actualizar una promoción
+  Future<bool> createOrUpdatePromotion(PromotionModel promotion) async {
     try {
-      await _promotionRepository.updatePromotion(promotion);
-      _logger.info("Promotion '${promotion.name}' updated successfully.");
+      final promotionCollection = _firestore.collection('promotions').doc(userId).collection('user_promotions');
+      if (promotion.id == null) {
+        await promotionCollection.add(promotion.toFirestore());
+      } else {
+        await promotionCollection.doc(promotion.id).update(promotion.toFirestore());
+      }
       await fetchPromotions();
       return true;
-    } catch (e, stackTrace) {
-      _logger.severe('Error updating promotion "${promotion.name}"', e, stackTrace);
-      _errorMessage = 'No se pudo actualizar la promoción.';
-      return false;
-    } finally {
-      _isLoading = false;
+    } on FirebaseException catch (e) {
+      _errorMessage = 'Error de Firebase: ${e.message}';
       notifyListeners();
+      return false;
+    } catch (e) {
+      _errorMessage = 'Error inesperado: $e';
+      notifyListeners();
+      return false;
     }
   }
 
-  // Métodos para interactuar con la base de datos
-  Future<bool> deletePromotion(String promotionId) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-    try {
-      await _promotionRepository.deletePromotion(promotionId);
-      _logger.info("Promotion '$promotionId' deleted successfully.");
-      await fetchPromotions();
-      return true;
-    } catch (e, stackTrace) {
-      _logger.severe('Error deleting promotion "$promotionId"', e, stackTrace);
-      _errorMessage = 'No se pudo eliminar la promoción.';
-      return false;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  // Métodos para interactuar con la base de datos
+  // Nuevo método para crear un cupón para una promoción
   Future<bool> createCoupon(CouponModel coupon) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
     try {
-      await _promotionRepository.createCoupon(coupon);
-      _logger.info("Coupon '${coupon.code}' created successfully for promotion '${coupon.promotionId}'.");
+      final couponCollection = _firestore
+          .collection('promotions')
+          .doc(userId)
+          .collection('user_promotions')
+          .doc(coupon.promotionId)
+          .collection('coupons');
+
+      await couponCollection.add(coupon.toFirestore());
       return true;
-    } catch (e, stackTrace) {
-      _logger.severe('Error creating coupon "${coupon.code}"', e, stackTrace);
-      _errorMessage = 'No se pudo crear el cupón.';
-      return false;
-    } finally {
-      _isLoading = false;
+    } on FirebaseException catch (e) {
+      _errorMessage = 'Error de Firebase: ${e.message}';
       notifyListeners();
+      return false;
+    } catch (e) {
+      _errorMessage = 'Error inesperado: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Método para eliminar una promoción
+  Future<bool> deletePromotion(String promotionId) async {
+    try {
+      final promotionRef = _firestore.collection('promotions').doc(userId).collection('user_promotions').doc(promotionId);
+      await promotionRef.delete();
+      await fetchPromotions();
+      return true;
+    } on FirebaseException catch (e) {
+      _errorMessage = 'Error de Firebase: ${e.message}';
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _errorMessage = 'Error inesperado: $e';
+      notifyListeners();
+      return false;
     }
   }
 }

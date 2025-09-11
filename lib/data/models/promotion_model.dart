@@ -1,39 +1,36 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// Enumeraciones para representar diferentes tipos de descuentos y estados de promociones
+// Enum para los tipos de descuento.
 enum DiscountType {
   percentage,
-  fixedAmount,
+  fixed,
 }
 
-// Extensión para la enumeración DiscountType
+// Extensión para obtener el nombre legible del tipo de descuento.
 extension DiscountTypeExtension on DiscountType {
   String get displayName {
     switch (this) {
       case DiscountType.percentage:
         return 'Porcentaje';
-      case DiscountType.fixedAmount:
-        return 'Monto Fijo';
+      case DiscountType.fixed:
+        return 'Valor Fijo';
     }
   }
 }
 
-// Enumeración para representar diferentes estados de promociones
+// Enum para los estados de la promoción.
 enum PromotionStatus {
   active,
-  inactive,
   scheduled,
   expired,
 }
 
-// Extensión para la enumeración PromotionStatus
+// Extensión para obtener el nombre legible del estado de la promoción.
 extension PromotionStatusExtension on PromotionStatus {
   String get displayName {
     switch (this) {
       case PromotionStatus.active:
         return 'Activa';
-      case PromotionStatus.inactive:
-        return 'Inactiva';
       case PromotionStatus.scheduled:
         return 'Programada';
       case PromotionStatus.expired:
@@ -42,60 +39,9 @@ extension PromotionStatusExtension on PromotionStatus {
   }
 }
 
-// Funciones de ayuda para la conversión de enumeraciones
-String discountTypeToString(DiscountType type) {
-  switch (type) {
-    case DiscountType.percentage:
-      return 'percentage';
-    case DiscountType.fixedAmount:
-      return 'fixedAmount';
-  }
-}
-
-// Función de ayuda para la conversión de string a DiscountType
-DiscountType stringToDiscountType(String? typeStr) {
-  switch (typeStr?.toLowerCase()) {
-    case 'fixedamount':
-      return DiscountType.fixedAmount;
-    case 'percentage':
-    default:
-      return DiscountType.percentage;
-  }
-}
-
-// Función de ayuda para la conversión de PromotionStatus a string
-String promotionStatusToString(PromotionStatus status) {
-  switch (status) {
-    case PromotionStatus.active:
-      return 'active';
-    case PromotionStatus.inactive:
-      return 'inactive';
-    case PromotionStatus.scheduled:
-      return 'scheduled';
-    case PromotionStatus.expired:
-      return 'expired';
-  }
-}
-
-// Función de ayuda para la conversión de string a PromotionStatus
-PromotionStatus stringToPromotionStatus(String? statusStr) {
-  switch (statusStr?.toLowerCase()) {
-    case 'inactive':
-      return PromotionStatus.inactive;
-    case 'active':
-      return PromotionStatus.active;
-    case 'scheduled':
-      return PromotionStatus.scheduled;
-    case 'expired':
-      return PromotionStatus.expired;
-    default:
-      return PromotionStatus.inactive;
-  }
-}
-
-// Clase para representar una promoción
+// Clase del modelo de promoción.
 class PromotionModel {
-  final String? id;
+  String? id;
   final String name;
   final String description;
   final DiscountType discountType;
@@ -103,8 +49,8 @@ class PromotionModel {
   final Timestamp startDate;
   final Timestamp endDate;
   final PromotionStatus status;
+  final String userId;
 
-  // Constructor de la clase
   PromotionModel({
     this.id,
     required this.name,
@@ -114,33 +60,67 @@ class PromotionModel {
     required this.startDate,
     required this.endDate,
     required this.status,
+    required this.userId,
   });
 
-  // Factory constructor para crear una instancia desde un mapa
-  factory PromotionModel.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+  // Constructor de fábrica para crear una instancia desde un documento de Firestore.
+  factory PromotionModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
+    final data = doc.data()!;
     return PromotionModel(
       id: doc.id,
       name: data['name'] ?? '',
       description: data['description'] ?? '',
-      discountType: stringToDiscountType(data['discountType']),
-      discountValue: (data['discountValue'] ?? 0.0).toDouble(),
-      startDate: data['startDate'] ?? Timestamp.now(),
-      endDate: data['endDate'] ?? Timestamp.now(),
-      status: stringToPromotionStatus(data['status']),
+      discountType: DiscountType.values.firstWhere(
+            (e) => e.toString().split('.').last == data['discountType'],
+        orElse: () => DiscountType.percentage,
+      ),
+      discountValue: (data['discountValue'] as num?)?.toDouble() ?? 0.0,
+      startDate: data['startDate'] as Timestamp,
+      endDate: data['endDate'] as Timestamp,
+      status: PromotionStatus.values.firstWhere(
+            (e) => e.toString().split('.').last == data['status'],
+        orElse: () => PromotionStatus.scheduled,
+      ),
+      userId: data['userId'] as String,
     );
   }
 
-  // Metodo para convertir la instancia en un mapa
+  // Método para convertir la instancia en un mapa para Firestore.
   Map<String, dynamic> toFirestore() {
     return {
       'name': name,
       'description': description,
-      'discountType': discountType.name,
+      'discountType': discountType.toString().split('.').last,
       'discountValue': discountValue,
       'startDate': startDate,
       'endDate': endDate,
-      'status': promotionStatusToString(status),
+      'status': status.toString().split('.').last,
+      'userId': userId,
     };
+  }
+
+  // Método para crear una copia del objeto con valores opcionalmente cambiados.
+  PromotionModel copyWith({
+    String? id,
+    String? name,
+    String? description,
+    DiscountType? discountType,
+    double? discountValue,
+    Timestamp? startDate,
+    Timestamp? endDate,
+    PromotionStatus? status,
+    String? userId,
+  }) {
+    return PromotionModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      discountType: discountType ?? this.discountType,
+      discountValue: discountValue ?? this.discountValue,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      status: status ?? this.status,
+      userId: userId ?? this.userId,
+    );
   }
 }

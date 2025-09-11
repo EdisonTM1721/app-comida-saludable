@@ -27,6 +27,7 @@ class ProductModel {
   final List<String> ingredients;
   final bool isFeatured;
   final double? approxCalories;
+  final String? userId; // Agregado el campo userId al modelo
 
   // Constructor de la clase
   ProductModel({
@@ -40,6 +41,7 @@ class ProductModel {
     required this.ingredients,
     this.isFeatured = false,
     this.approxCalories,
+    this.userId, // El campo userId es opcional en el constructor
   });
 
   // Factory constructor para crear una instancia desde un mapa
@@ -58,6 +60,7 @@ class ProductModel {
       ingredients: List<String>.from(data['ingredients'] as List? ?? []),
       isFeatured: data['isFeatured'] as bool? ?? false,
       approxCalories: (data['approxCalories'] as num?)?.toDouble(),
+      userId: data['userId'] as String?, // Obtener el userId del documento
     );
   }
 
@@ -72,6 +75,7 @@ class ProductModel {
       'description': description,
       'ingredients': ingredients,
       'isFeatured': isFeatured,
+      'userId': userId, // Guardar el userId en el mapa
       if (approxCalories != null) 'approxCalories': approxCalories,
     };
   }
@@ -87,6 +91,7 @@ class ProductModel {
     List<String>? ingredients,
     bool? isFeatured,
     double? approxCalories,
+    String? userId, // Agregado el parámetro userId para la copia
   }) {
     // Si no se proporciona un id, usar el id actual
     return ProductModel(
@@ -100,6 +105,7 @@ class ProductModel {
       ingredients: ingredients ?? this.ingredients,
       isFeatured: isFeatured ?? this.isFeatured,
       approxCalories: approxCalories ?? this.approxCalories,
+      userId: userId ?? this.userId, // Copiar el userId o usar el nuevo
     );
   }
 }

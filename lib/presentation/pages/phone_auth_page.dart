@@ -1,48 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:logging/logging.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
+import 'package:emprendedor/presentation/pages/auth_wrapper.dart';
+import 'package:flutter/foundation.dart'; // Importa foundation para kIsWeb
 
 // Configuración de logging
 final Logger logger = Logger('PhoneAuthPage');
 
-// Nueva página de autenticación con teléfono
+// Página de autenticación con teléfono
 class PhoneAuthPage extends StatefulWidget {
   final bool isLogin;
   const PhoneAuthPage({super.key, required this.isLogin});
 
-  // Construir la página
   @override
   State<PhoneAuthPage> createState() => _PhoneAuthPageState();
 }
 
-// Estado de la nueva página
 class _PhoneAuthPageState extends State<PhoneAuthPage> {
   final _auth = FirebaseAuth.instance;
-  final _phoneController = TextEditingController();
   final _smsCodeController = TextEditingController();
   String? _verificationId;
   int? _resendToken;
   String? _errorMessage;
   bool _isCodeSent = false;
   bool _isLoading = false;
+  String? _phoneNumber;
 
-  // --- FUNCIÓN AUXILIAR PARA NOTIFICACIONES PERSONALIZADAS ---
   @override
   void dispose() {
-    _phoneController.dispose();
     _smsCodeController.dispose();
     super.dispose();
   }
 
-  // Metodo para enviar el código de verificación
+  // Método para enviar el código de verificación
   Future<void> _sendCode() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
-    final phoneNumber = _phoneController.text.trim();
-    if (phoneNumber.isEmpty) {
+    if (_phoneNumber == null || _phoneNumber!.isEmpty) {
       setState(() {
         _errorMessage = 'Por favor, ingrese un número de teléfono válido.';
         _isLoading = false;
@@ -52,27 +50,36 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
 
     try {
       await _auth.verifyPhoneNumber(
-        phoneNumber: phoneNumber,
-
+        phoneNumber: _phoneNumber!,
         forceResendingToken: _isCodeSent ? _resendToken : null,
         verificationCompleted: (PhoneAuthCredential credential) async {
-          logger.info('Verificación completada automáticamente para $phoneNumber');
-          await _auth.signInWithCredential(credential);
-          if (mounted) {
-            Navigator.of(context).pop();
-          }
+          logger.info('Verificación completada automáticamente. No se usará para forzar la verificación manual.');
         },
         verificationFailed: (FirebaseAuthException e) {
-          logger.severe('Error de verificación para $phoneNumber: ${e.code} - ${e.message}');
+          logger.severe('Error de verificación para $_phoneNumber: ${e.code} - ${e.message}');
+          String message;
+          switch (e.code) {
+            case 'invalid-phone-number':
+              message = 'El número de teléfono es inválido.';
+              break;
+            case 'missing-phone-number':
+              message = 'Por favor, ingrese el número de teléfono.';
+              break;
+            case 'too-many-requests':
+              message = 'Has enviado demasiados códigos. Por favor, inténtelo más tarde.';
+              break;
+            default:
+              message = e.message ?? 'Ocurrió un error durante la verificación.';
+          }
           if (mounted) {
             setState(() {
-              _errorMessage = e.message ?? "Ocurrió un error durante la verificación.";
+              _errorMessage = message;
               _isLoading = false;
             });
           }
         },
         codeSent: (String verificationId, int? resendToken) {
-          logger.info('Código enviado a $phoneNumber. Verification ID: $verificationId, Resend Token: $resendToken');
+          logger.info('Código enviado a $_phoneNumber. Verification ID: $verificationId, Resend Token: $resendToken');
           if (mounted) {
             setState(() {
               _verificationId = verificationId;
@@ -87,21 +94,21 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
           }
         },
         codeAutoRetrievalTimeout: (String verificationId) {
-          logger.info('Timeout de auto-recuperación de código para $phoneNumber. Verification ID: $verificationId');
+          logger.info('Timeout de auto-recuperación de código para $_phoneNumber. Verification ID: $verificationId');
         },
       );
-    } catch (e, stackTrace) { // Capturar stackTrace para un mejor logging
-      logger.severe('Excepción al llamar a verifyPhoneNumber para $phoneNumber: $e', e, stackTrace);
+    } catch (e, stackTrace) {
+      logger.severe('Excepción al llamar a verifyPhoneNumber para $_phoneNumber: $e', e, stackTrace);
       if (mounted) {
         setState(() {
-          _errorMessage = 'Ocurrió un error inesperado al enviar el código.';
+          _errorMessage = 'Ocurrió un error inesperado al enviar el código. Verifique su conexión.';
           _isLoading = false;
         });
       }
     }
   }
 
-  // Metodo para verificar el código y autenticar al usuario
+  // Método para verificar el código y autenticar al usuario
   Future<void> _verifyCode() async {
     if (!mounted) return;
     setState(() {
@@ -139,14 +146,32 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
       logger.info('Intentando iniciar sesión con credencial de teléfono.');
       await _auth.signInWithCredential(credential);
       logger.info('Inicio de sesión exitoso con teléfono.');
+
       if (mounted) {
-        Navigator.of(context).pop();
+        // Redirige al AuthWrapper para que este maneje la lógica de navegación
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const AuthWrapper()),
+        );
       }
     } on FirebaseAuthException catch (e) {
       logger.severe('Error de FirebaseAuthException al verificar el código: ${e.code} - ${e.message}');
+      String message;
+      switch (e.code) {
+        case 'invalid-verification-code':
+          message = 'El código de verificación es incorrecto. Por favor, revíselo.';
+          break;
+        case 'invalid-verification-id':
+          message = 'El ID de verificación es inválido. Intente reenviar el código.';
+          break;
+        case 'credential-already-in-use':
+          message = 'Esta credencial ya ha sido usada. Por favor, inicie sesión de nuevo.';
+          break;
+        default:
+          message = e.message ?? 'Ocurrió un error inesperado al verificar el código.';
+      }
       if (mounted) {
         setState(() {
-          _errorMessage = e.message ?? "Error al verificar el código.";
+          _errorMessage = message;
           _isLoading = false;
         });
       }
@@ -180,20 +205,16 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
               ),
               const SizedBox(height: 32),
               if (!_isCodeSent) ...[
-                TextFormField(
-                  controller: _phoneController,
-                  keyboardType: TextInputType.phone,
+                IntlPhoneField(
                   decoration: const InputDecoration(
                     labelText: 'Número de Teléfono',
-                    prefixIcon: Icon(Icons.phone),
-                    hintText: '+16505551234',
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(),
+                    ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Por favor, ingrese un número de teléfono.';
-                    }
-
-                    return null;
+                  initialCountryCode: 'EC',
+                  onChanged: (phone) {
+                    _phoneNumber = phone.completeNumber;
                   },
                 ),
                 const SizedBox(height: 24),

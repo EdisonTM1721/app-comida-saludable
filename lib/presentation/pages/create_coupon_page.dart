@@ -7,27 +7,32 @@ import 'package:emprendedor/data/models/promotion_model.dart';
 
 // Nueva página para crear un cupón
 class CreateCouponPage extends StatefulWidget {
-  final String promotionId;
+  final PromotionModel promotion;
 
   // Constructor de la nueva página
-  const CreateCouponPage({super.key, required this.promotionId});
+  // CORREGIDO: Se eliminó el parámetro redundante 'promotionId'
+  const CreateCouponPage({super.key, required this.promotion});
 
   // Metodo para crear una nueva instancia de la página
   @override
-  // CORREGIDO: Devolver la clase de estado pública
   CreateCouponPageState createState() => CreateCouponPageState();
 }
 
 // Estado de la nueva página
-// CORREGIDO: Hacer la clase de estado pública (quitar el guion bajo '_')
 class CreateCouponPageState extends State<CreateCouponPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _couponCodeController = TextEditingController();
-  final TextEditingController _minPurchaseController = TextEditingController(text: '0.0');
+  final TextEditingController _minPurchaseController = TextEditingController(text: '0');
   DateTime? _validityDate = DateTime.now().add(const Duration(days: 30));
   bool _isSubmitting = false;
 
-  // Limpiar los controladores al salir de la página
+  @override
+  void initState() {
+    super.initState();
+    // Aquí podrías inicializar algo si fuera necesario usando widget.promotion
+    // Por ejemplo, si el cupón tuviera un código sugerido basado en la promoción.
+  }
+
   @override
   void dispose() {
     _couponCodeController.dispose();
@@ -35,23 +40,19 @@ class CreateCouponPageState extends State<CreateCouponPage> {
     super.dispose();
   }
 
-  // Metodo para seleccionar la fecha
   Future<void> _selectDate(BuildContext context) async {
-
     final DateTime? picked = await showDatePicker(
-      context: context, // Usar el context pasado
+      context: context,
       initialDate: _validityDate ?? DateTime.now().add(const Duration(days: 7)),
       firstDate: DateTime.now(),
       lastDate: DateTime(2030),
     );
-    // DESPUÉS del await, comprobar 'mounted'.
     if (!mounted || picked == null) return;
     setState(() {
       _validityDate = picked;
     });
   }
 
-  // Metodo para enviar el formulario
   Future<void> _submitForm() async {
     if (_isSubmitting) return;
 
@@ -66,52 +67,59 @@ class CreateCouponPageState extends State<CreateCouponPage> {
     if (!mounted) return;
     setState(() { _isSubmitting = true; });
 
-    final promotionController = Provider.of<PromotionController>(context, listen: false);
-    PromotionModel? promotion;
-
     try {
-
-      promotion = promotionController.promotions.firstWhere((p) => p.id == widget.promotionId);
+      // Usamos widget.promotion.id que ya está disponible
+      if (widget.promotion.id == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error: El ID de la promoción no está disponible.')),
+        );
+        setState(() { _isSubmitting = false; });
+        return;
+      }
 
       final newCoupon = CouponModel(
         code: _couponCodeController.text.trim(),
-        promotionId: widget.promotionId,
-        discountValue: promotion.discountValue,
+        promotionId: widget.promotion.id!, // Correcto, usa el id del objeto promotion
+        discountValue: widget.promotion.discountValue, // Correcto
         validityDate: Timestamp.fromDate(_validityDate!),
         minimumPurchase: double.tryParse(_minPurchaseController.text) ?? 0.0,
         status: CouponStatus.active,
+        isUsed: false,
       );
 
-      await promotionController.createCoupon(newCoupon);
+      final promotionController = context.read<PromotionController>();
+      final bool success = await promotionController.createCoupon(newCoupon);
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cupón creado exitosamente!')),
-      );
-      Navigator.of(context).pop();
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cupón creado exitosamente!')),
+        );
+        Navigator.of(context).pop();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(promotionController.errorMessage ?? 'Error al crear cupón.')),
+        );
+      }
 
     } catch (error) {
-
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al crear cupón: $error')),
+        SnackBar(content: Text('Error inesperado: $error')),
       );
     } finally {
-      // DESPUÉS de todo (incluyendo awaits implícitos), comprobar 'mounted'
       if (mounted) {
         setState(() { _isSubmitting = false; });
       }
     }
   }
 
-  // Construir la página
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Crear Cupón')),
+      appBar: AppBar(title: Text('Crear Cupón para ${widget.promotion.name}')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -119,7 +127,7 @@ class CreateCouponPageState extends State<CreateCouponPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const Text('Crea un cupón para la promoción seleccionada.'),
+              Text('Crea un cupón para la promoción "${widget.promotion.name}". El descuento será de ${widget.promotion.discountValue}%.'),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _couponCodeController,
@@ -139,18 +147,29 @@ class CreateCouponPageState extends State<CreateCouponPage> {
                       : 'Válido hasta: ${_validityDate!.toLocal().toString().split(' ')[0]}',
                 ),
                 trailing: const Icon(Icons.calendar_today),
-
                 onTap: _isSubmitting ? null : () => _selectDate(context),
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _minPurchaseController,
-                decoration: const InputDecoration(labelText: 'Monto Mínimo de Compra (opcional)'),
-                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Monto Mínimo de Compra',
+                  prefixText: '\$',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 validator: (value) {
-                  // Corregido: value puede ser null aquí.
-                  if (value != null && value.isNotEmpty && double.tryParse(value) == null) {
+                  if (value == null || value.isEmpty) {
+                    // Considera si este campo debe ser obligatorio o puede ser 0 por defecto
+                    // Si es opcional, `return null;` está bien.
+                    // Si es requerido, `return 'Ingresa un monto mínimo.';`
+                    return null;
+                  }
+                  final number = double.tryParse(value);
+                  if (number == null) {
                     return 'Ingresa un número válido.';
+                  }
+                  if (number < 0) {
+                    return 'El monto no puede ser negativo.';
                   }
                   return null;
                 },

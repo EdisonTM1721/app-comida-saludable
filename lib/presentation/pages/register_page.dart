@@ -1,11 +1,14 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:logging/logging.dart';
 import 'package:emprendedor/presentation/pages/phone_auth_page.dart';
 import 'package:emprendedor/presentation/pages/login_page.dart';
-import 'package:url_launcher/url_launcher.dart'; // ASEGÚRATE DE TENER ESTE PAQUETE EN PUBSPEC.YAML
+import 'package:emprendedor/presentation/pages/home_screen.dart';
+import 'package:emprendedor/data/models/business_profile_model.dart';
+import 'package:emprendedor/data/repositories/business_profile_repository.dart';
+import 'package:flutter/gestures.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 final Logger logger = Logger('RegisterPage');
 
@@ -52,6 +55,7 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
+  // Método de registro con correo y contraseña
   Future<void> _registerWithEmail() async {
     if (!mounted) return;
     if (_formKey.currentState?.validate() ?? false) {
@@ -60,18 +64,23 @@ class _RegisterPageState extends State<RegisterPage> {
         _isLoading = true;
       });
       try {
-
-        await _auth.createUserWithEmailAndPassword(
+        final userCredential = await _auth.createUserWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text,
         );
 
-        // TODO: Crear perfil en Firestore (usar userCredential.user.uid)
+        // CREAMOS EL PERFIL DE NEGOCIO EN LA COLECCIÓN CORRECTA
+        final userId = userCredential.user!.uid;
+        final newProfile = BusinessProfileModel(
+          userId: userId,
+          name: 'Nuevo Emprendedor',
+        );
+        await BusinessProfileRepository().createBusinessProfile(newProfile);
 
         if (!mounted) return;
-        _showSnackBar('¡Registro exitoso! Redirigiendo a inicio de sesión...');
+        _showSnackBar('¡Registro exitoso! Redirigiendo...');
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const LoginPage()),
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       } on FirebaseAuthException catch (e) {
         if (!mounted) return;
@@ -98,6 +107,7 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
+  // Método de registro con Google
   Future<void> _registerWithGoogle() async {
     if (!mounted) return;
     setState(() {
@@ -105,12 +115,10 @@ class _RegisterPageState extends State<RegisterPage> {
       _errorMessage = null;
     });
     try {
-      await GoogleSignIn().signOut();
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
 
       if (googleUser == null) {
         if (!mounted) return;
-        setState(() => _isLoading = false);
         return;
       }
 
@@ -124,18 +132,20 @@ class _RegisterPageState extends State<RegisterPage> {
       if (!mounted) return;
 
       if (userCredential.additionalUserInfo?.isNewUser == true) {
-        // TODO: Crear perfil en Firestore (usar userCredential.user.uid, googleUser.displayName, googleUser.email)
-        _showSnackBar('¡Registro exitoso con Google! Redirigiendo...');
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const LoginPage()),
+        final newProfile = BusinessProfileModel(
+          userId: userCredential.user!.uid,
+          name: googleUser.displayName ?? 'Nuevo Emprendedor',
         );
+        await BusinessProfileRepository().createBusinessProfile(newProfile);
+        _showSnackBar('¡Registro exitoso con Google!');
       } else {
-        setState(() {
-          _errorMessage = 'Ya existe una cuenta con este correo electrónico de Google.';
-        });
-        _showSnackBar('¡Ya tienes una cuenta con Google! Por favor, inicia sesión.', isError: true);
-        await GoogleSignIn().signOut();
-        await _auth.signOut();
+        _showSnackBar('¡Inicio de sesión con Google exitoso!');
+      }
+
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
       }
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
@@ -170,7 +180,6 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // Guardar el contexto antes de mostrar el diálogo
     final currentContext = context;
 
     final bool? shouldDelete = await showDialog<bool>(
@@ -216,15 +225,18 @@ class _RegisterPageState extends State<RegisterPage> {
         _isLoading = true;
       });
       try {
+        final profileRepo = BusinessProfileRepository();
+        final profile = await profileRepo.getBusinessProfile(user.uid);
+        if (profile != null) {
+          await profileRepo.deleteBusinessProfile(profile.id!);
+        }
 
         await user.delete();
-        // TODO: Eliminar datos del usuario de Firestore y cualquier otro backend.
 
         if (!mounted) return;
         _showSnackBar('Cuenta eliminada con éxito. Serás redirigido.');
         await GoogleSignIn().signOut();
 
-        // Usar el contexto guardado para la navegación
         Navigator.of(currentContext).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const LoginPage()),
               (Route<dynamic> route) => false,
@@ -375,7 +387,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 ),
                                 padding: const EdgeInsets.symmetric(vertical: 12),
                               ),
-                              child: (_isLoading && _emailController.text.isNotEmpty)
+                              child: _isLoading
                                   ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
                                   : const Text('Crear Cuenta', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                             ),
@@ -470,26 +482,13 @@ class _RegisterPageState extends State<RegisterPage> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: _isLoading ? null : () async {
+                      onPressed: _isLoading ? null : () {
                         if (!mounted) return;
-                        final success = await Navigator.of(context).push(
+                        Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) => const PhoneAuthPage(isLogin: false),
                           ),
                         );
-                        if (!mounted) return;
-                        if (success != null && success == true) {
-                          // 1. Mostrar el Snackbar de éxito.
-                          _showSnackBar('¡Registro exitoso! Redirigiendo a inicio de sesión...');
-
-                          // 2. Esperar 2 segundos antes de navegar.
-                          await Future.delayed(const Duration(seconds: 2));
-
-                          // 3. Redirigir a la LoginPage.
-                          Navigator.of(context).pushReplacement(
-                            MaterialPageRoute(builder: (context) => const LoginPage()),
-                          );
-                        }
                       },
                       icon: const Icon(Icons.phone_iphone_outlined, color: Colors.white),
                       label: const Text('Continuar con Teléfono'),
@@ -514,7 +513,6 @@ class _RegisterPageState extends State<RegisterPage> {
                       style: TextStyle(color: Colors.white, fontSize: 15),
                     ),
                   ),
-                  // Botón de eliminar cuenta (considerar mover a una página de ajustes post-login)
                   if (_auth.currentUser != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 16.0),

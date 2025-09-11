@@ -36,8 +36,8 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCtrraHknTFTgOMKevOz8KCGc83RBQ6RYs',
-    appId: '1:373215790658:android:c4908a4c655a25a5180fdb',
+    apiKey: 'AIzaSyDY4k8MHDDWZbl3HEyhDCnGh57g3PdAil4',
+    appId: '1:373215790658:android:bc6063e1566bbd78180fdb',
     messagingSenderId: '373215790658',
     projectId: 'appemprendedores-b1f30',
     databaseURL: 'https://appemprendedores-b1f30-default-rtdb.firebaseio.com',
@@ -48,14 +48,14 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyB27lke87rlHh7wqgKzmYFc3oK0iLCzccc',
-    appId: '1:373215790658:ios:f4c8623f44d50f82180fdb',
+    appId: '1:373215790658:ios:5f4e5b97ca7ac218180fdb',
     messagingSenderId: '373215790658',
     projectId: 'appemprendedores-b1f30',
     databaseURL: 'https://appemprendedores-b1f30-default-rtdb.firebaseio.com',
     storageBucket: 'appemprendedores-b1f30.firebasestorage.app',
     androidClientId: '373215790658-391aovrs5s0t98cku9vnin9khfube95k.apps.googleusercontent.com',
-    iosClientId: '373215790658-7pu3usn1t2i3c8k0fb7t4620fg4kt7a6.apps.googleusercontent.com',
-    iosBundleId: 'com.example.emprendedor',
+    iosClientId: '373215790658-s10oie248kh406bpdsbopei3va47ed7i.apps.googleusercontent.com',
+    iosBundleId: 'com.crearcos.emprendedor',
   );
 
   // Configuración para iOS

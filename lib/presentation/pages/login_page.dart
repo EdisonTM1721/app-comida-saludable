@@ -28,14 +28,13 @@ class _LoginPageState extends State<LoginPage> {
   String? _errorMessage;
   bool _isLoading = false;
 
-  // --- FUNCIÓN AUXILIAR PARA NOTIFICACIONES PERSONALIZADAS ---
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
-  // --- FIN DE FUNCIÓN AUXILIAR ---
+
   Future<void> _launchURL(String urlString) async {
     final Uri url = Uri.parse(urlString);
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
@@ -47,7 +46,6 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  // --- FUNCIÓN AUXILIAR PARA NOTIFICACIONES PERSONALIZADAS ---
   Future<void> _signInWithEmail() async {
     if (!mounted) return;
     if (_formKey.currentState?.validate() ?? false) {
@@ -60,11 +58,22 @@ class _LoginPageState extends State<LoginPage> {
           email: _emailController.text.trim(),
           password: _passwordController.text,
         );
-        // La navegación la maneja el listener de authStateChanges
+        // La navegación la maneja el listener de authStateChanges, no se requiere push aquí.
       } on FirebaseAuthException catch (e) {
         if (!mounted) return;
+        String message;
+        switch (e.code) {
+          case 'user-not-found':
+            message = 'No se encontró una cuenta con este correo.';
+            break;
+          case 'wrong-password':
+            message = 'Contraseña incorrecta. Por favor, intente de nuevo.';
+            break;
+          default:
+            message = e.message ?? "Error de inicio de sesión. Por favor, inténtelo de nuevo.";
+        }
         setState(() {
-          _errorMessage = e.message ?? "Error de inicio de sesión.";
+          _errorMessage = message;
         });
         logger.severe('Error de autenticación con email: ${e.code} - ${e.message}');
       } finally {
@@ -76,7 +85,7 @@ class _LoginPageState extends State<LoginPage> {
       }
     }
   }
-  // --- FIN DE FUNCIÓN AUXILIAR ---
+
   Future<void> _signInWithGoogle() async {
     if (!mounted) return;
     setState(() {
@@ -84,11 +93,9 @@ class _LoginPageState extends State<LoginPage> {
       _isLoading = true;
     });
     try {
-      await GoogleSignIn().signOut(); // Para un flujo limpio
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
       if (googleUser == null) {
         if (!mounted) return;
-        setState(() => _isLoading = false);
         return;
       }
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
@@ -100,8 +107,19 @@ class _LoginPageState extends State<LoginPage> {
       // La navegación la maneja el listener de authStateChanges
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
+      String message;
+      switch (e.code) {
+        case 'account-exists-with-different-credential':
+          message = 'Ya existe una cuenta con este correo. Inicia sesión con otro método.';
+          break;
+        case 'invalid-credential':
+          message = 'Credenciales de Google inválidas.';
+          break;
+        default:
+          message = e.message ?? 'Error con Google Sign-In. Por favor, inténtelo de nuevo.';
+      }
       setState(() {
-        _errorMessage = e.message ?? "Error con Google Sign-In.";
+        _errorMessage = message;
       });
       logger.severe('Error de autenticación con Google: ${e.code} - ${e.message}');
     } catch (e) {
@@ -118,10 +136,10 @@ class _LoginPageState extends State<LoginPage> {
       }
     }
   }
-  // --- FUNCIÓN AUXILIAR PARA NOTIFICACIONES PERSONALIZADAS ---
+
   Future<void> _resetPassword() async {
     if (!mounted) return;
-    final currentContext = context; // Guardar context para SnackBar
+    final currentContext = context;
 
     if (_emailController.text.trim().isEmpty || !_emailController.text.trim().contains('@')) {
       ScaffoldMessenger.of(currentContext).showSnackBar(
@@ -156,7 +174,7 @@ class _LoginPageState extends State<LoginPage> {
       setState(() => _isLoading = false);
     }
   }
-  // --- FIN DE FUNCIÓN AUXILIAR ---
+
   @override
   Widget build(BuildContext context) {
     final Color backgroundColor = Colors.grey[100]!;
@@ -298,8 +316,9 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const SizedBox(height: 16),
+                      // LÓGICA DE NAVEGACIÓN CORREGIDA AQUÍ
                       ElevatedButton.icon(
-                        onPressed: _isLoading ? null : () {
+                        onPressed: _isLoading ? null : () async {
                           if (mounted) {
                             Navigator.of(context).push(
                               MaterialPageRoute(builder: (context) => const PhoneAuthPage(isLogin: true)),
@@ -393,4 +412,3 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
-

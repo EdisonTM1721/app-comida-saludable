@@ -1,3 +1,5 @@
+// Archivo: profile_controller.dart
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -6,27 +8,25 @@ import 'package:emprendedor/data/models/business_profile_model.dart';
 import 'package:emprendedor/data/repositories/business_profile_repository.dart';
 import 'package:logging/logging.dart';
 
-// Clase para el controlador del perfil
 final Logger logger = Logger('ProfileController');
 
-// Clase para el controlador del perfil
 class ProfileController extends ChangeNotifier {
   final _auth = FirebaseAuth.instance;
   final _storage = FirebaseStorage.instance;
   final BusinessProfileRepository _repository = BusinessProfileRepository();
 
-  // Datos del perfil
   BusinessProfileModel? _businessProfile;
   bool _isLoading = false;
   String? _errorMessage;
 
-  // Getters
   BusinessProfileModel? get businessProfile => _businessProfile;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  // Constructor
-  ProfileController() {
+  // Agrega este getter para verificar la existencia del perfil
+  bool get hasProfile => _businessProfile != null;
+
+  ProfileController({required String userId}) {
     _auth.authStateChanges().listen((user) {
       if (user != null) {
         logger.info('ProfileController Constructor: Usuario autenticado (${user.uid}). Llamando a fetchBusinessProfile.');
@@ -41,7 +41,6 @@ class ProfileController extends ChangeNotifier {
     });
   }
 
-  // Métodos para interactuar con la base de datos
   Future<void> fetchBusinessProfile() async {
     logger.info('fetchBusinessProfile: Iniciando carga del perfil...');
     _isLoading = true;
@@ -50,8 +49,6 @@ class ProfileController extends ChangeNotifier {
 
     try {
       final userId = _auth.currentUser?.uid;
-      logger.info('fetchBusinessProfile: User ID actual = $userId');
-
       if (userId == null) {
         _errorMessage = "Usuario no autenticado.";
         _businessProfile = null;
@@ -71,7 +68,6 @@ class ProfileController extends ChangeNotifier {
         _errorMessage = null;
         logger.info('fetchBusinessProfile: Perfil encontrado y asignado para $userId. Nombre: ${_businessProfile?.name}');
       }
-
     } catch (e, stackTrace) {
       _errorMessage = "Error al obtener el perfil: ${e.toString()}";
       _businessProfile = null;
@@ -83,7 +79,6 @@ class ProfileController extends ChangeNotifier {
     }
   }
 
-  // Métodos para interactuar con la base de datos
   Future<bool> saveProfile(BusinessProfileModel profileToSave, {File? imageFile}) async {
     logger.info('saveProfile: Iniciando guardado del perfil para el usuario: ${profileToSave.userId ?? _auth.currentUser?.uid}');
     _isLoading = true;
@@ -91,7 +86,6 @@ class ProfileController extends ChangeNotifier {
     notifyListeners();
     bool success = false;
 
-    // Validaciones
     try {
       final userId = _auth.currentUser?.uid;
       if (userId == null) {
@@ -100,29 +94,23 @@ class ProfileController extends ChangeNotifier {
         return false;
       }
 
-      // Asigna el ID del usuario al perfil
       profileToSave = profileToSave.copyWith(userId: userId);
 
-      // Subir imagen si se proporciona
       String? imageUrl = profileToSave.profileImageUrl;
       if (imageFile != null) {
         logger.info('saveProfile: Subiendo imagen...');
         final String imagePath = 'profile_images/$userId/${DateTime.now().millisecondsSinceEpoch}.jpg';
         final storageRef = _storage.ref().child(imagePath);
         final uploadTask = storageRef.putFile(imageFile);
-        final TaskSnapshot snapshot = await uploadTask.whenComplete(() =>
-        logger.info('saveProfile: Subida de imagen completada.')
-        );
+        final TaskSnapshot snapshot = await uploadTask.whenComplete(() => logger.info('saveProfile: Subida de imagen completada.'));
         imageUrl = await snapshot.ref.getDownloadURL();
         logger.info("saveProfile: Imagen subida exitosamente: $imageUrl");
       }
 
-      // Crear un nuevo perfil con la URL de la imagen
       BusinessProfileModel finalProfileToSave = profileToSave.copyWith(
         profileImageUrl: imageUrl,
       );
 
-      // Actualizar o crear el perfil
       if (finalProfileToSave.id != null && finalProfileToSave.id!.isNotEmpty) {
         logger.info("saveProfile: Actualizando perfil existente con ID: ${finalProfileToSave.id}");
         await _repository.updateBusinessProfile(finalProfileToSave);
@@ -140,12 +128,9 @@ class ProfileController extends ChangeNotifier {
         }
       }
 
-      // Actualizar el perfil local
       _errorMessage = null;
       success = true;
       logger.info('saveProfile: Perfil guardado exitosamente en el controlador. Nombre: ${_businessProfile?.name}');
-
-      // Actualizar el perfil en la base de datos
     } on FirebaseException catch (e, stackTrace) {
       _errorMessage = "Error de Firebase al guardar el perfil: ${e.message ?? e.code}";
       logger.severe('saveProfile: Error de Firebase. $_errorMessage', e, stackTrace);
@@ -162,4 +147,3 @@ class ProfileController extends ChangeNotifier {
     return success;
   }
 }
-

@@ -3,26 +3,35 @@ import 'package:provider/provider.dart';
 import 'package:emprendedor/presentation/controllers/promotion_controller.dart';
 import 'package:emprendedor/data/models/promotion_model.dart';
 import 'package:emprendedor/presentation/pages/create_edit_promotion_page.dart';
-import 'create_coupon_page.dart';
+import 'package:emprendedor/presentation/pages/create_coupon_page.dart';
 
-// Nueva clase para la lista de promociones
+// Esta página solo retorna el cuerpo de la vista, sin AppBar ni Scaffold.
 class PromotionsPage extends StatelessWidget {
   const PromotionsPage({super.key});
 
-  // Metodo para navegar a la página de creación o edición de una promoción
-  void _navigateToCreatePromotion(BuildContext context, {PromotionModel? promotionToEdit}) {
+  // Metodo para navegar a la página de EDICIÓN de una promoción
+  void _navigateToEditPromotion(BuildContext context, PromotionModel promotion) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => CreateEditPromotionPage(promotionToEdit: promotionToEdit),
+        builder: (_) => CreateEditPromotionPage(promotionToEdit: promotion),
       ),
     );
   }
 
-  // Metodo para navegar a la página de creación de un cupón
-  void _navigateToCreateCoupon(BuildContext context, String promotionId) {
+  // Metodo para navegar a la página de CREACIÓN de una promoción
+  void _navigateToCreatePromotion(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => CreateCouponPage(promotionId: promotionId),
+        builder: (_) => const CreateEditPromotionPage(promotionToEdit: null),
+      ),
+    );
+  }
+
+  // Metodo para navegar a la página de CREACIÓN de un cupón
+  void _navigateToCreateCoupon(BuildContext context, PromotionModel promotion) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CreateCouponPage(promotion: promotion),
       ),
     );
   }
@@ -35,10 +44,15 @@ class PromotionsPage extends StatelessWidget {
       builder: (BuildContext bc) {
         return SafeArea(
           child: Container(
-            color: Colors.transparent,
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
             child: Wrap(
               children: <Widget>[
-                // Barra de agarre para indicar que es deslizable (opcional)
                 Center(
                   child: Container(
                     margin: const EdgeInsets.symmetric(vertical: 10),
@@ -50,22 +64,13 @@ class PromotionsPage extends StatelessWidget {
                     ),
                   ),
                 ),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                    ),
-                  ),
-                  child: ListTile(
-                    leading: const Icon(Icons.add_circle_outline),
-                    title: const Text('Agregar Nueva Promoción'),
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      _navigateToCreatePromotion(context);
-                    },
-                  ),
+                ListTile(
+                  leading: const Icon(Icons.add_circle_outline),
+                  title: const Text('Agregar Nueva Promoción'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _navigateToCreatePromotion(context);
+                  },
                 ),
               ],
             ),
@@ -75,31 +80,77 @@ class PromotionsPage extends StatelessWidget {
     );
   }
 
-  // Construye la lista de promociones
   @override
   Widget build(BuildContext context) {
     final promotionController = Provider.of<PromotionController>(context);
 
-    return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: () => promotionController.fetchPromotions(),
-        child: _buildPromotionsList(context, promotionController),
-      ),
-      // CAMBIO: Se usa FloatingActionButton.small() para un botón más pequeño
-      floatingActionButton: FloatingActionButton.small(
-        onPressed: () => _showAddPromotionOptions(context),
-        tooltip: 'Crear Promoción',
-        child: const Icon(Icons.add),
+    // Retorna directamente el contenido de la página, sin un Scaffold
+    return RefreshIndicator(
+      onRefresh: () => promotionController.fetchPromotions(),
+      child: Stack(
+        children: [
+          _buildPromotionsList(context, promotionController),
+          Positioned(
+            bottom: 16,
+            right: 16,
+            child: FloatingActionButton(
+              onPressed: () => _showAddPromotionOptions(context),
+              tooltip: 'Crear Promoción',
+              child: const Icon(Icons.add),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // Construye la lista de promociones
   Widget _buildPromotionsList(BuildContext context, PromotionController controller) {
     if (controller.isLoading && controller.promotions.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
-    // Si no hay promociones, muestra un mensaje
+
+    if (controller.errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text(
+            'Error al cargar promociones: ${controller.errorMessage}',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.red, fontSize: 16),
+          ),
+        ),
+      );
+    }
+
+    if (controller.promotions.isEmpty) {
+      return const Center(
+        child: SingleChildScrollView(
+          physics: AlwaysScrollableScrollPhysics(),
+          child: Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.discount_outlined, size: 60, color: Colors.grey),
+                SizedBox(height: 16),
+                Text(
+                  'Aún no tienes promociones creadas.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Pulsa el botón "+" para crear tu primera promoción y empezar a generar cupones.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.only(bottom: 80),
       itemCount: controller.promotions.length,
@@ -139,7 +190,7 @@ class PromotionsPage extends StatelessWidget {
             trailing: PopupMenuButton<String>(
               onSelected: (value) {
                 if (value == 'edit') {
-                  _navigateToCreatePromotion(context, promotionToEdit: promotion);
+                  _navigateToEditPromotion(context, promotion);
                 } else if (value == 'delete') {
                   _showDeleteConfirmDialog(context, controller, promotion);
                 } else if (value == 'create_coupon') {
@@ -149,7 +200,7 @@ class PromotionsPage extends StatelessWidget {
                     );
                     return;
                   }
-                  _navigateToCreateCoupon(context, promotion.id!);
+                  _navigateToCreateCoupon(context, promotion);
                 }
               },
               itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
@@ -169,7 +220,7 @@ class PromotionsPage extends StatelessWidget {
             ),
             isThreeLine: true,
             onTap: () {
-              _navigateToCreatePromotion(context, promotionToEdit: promotion);
+              _navigateToEditPromotion(context, promotion);
             },
           ),
         );
@@ -177,7 +228,6 @@ class PromotionsPage extends StatelessWidget {
     );
   }
 
-  // Muestra un diálogo de confirmación para eliminar una promoción
   Future<void> _showDeleteConfirmDialog(BuildContext context, PromotionController controller, PromotionModel promotion) async {
     return showDialog<void>(
       context: context,
@@ -189,7 +239,7 @@ class PromotionsPage extends StatelessWidget {
             child: ListBody(
               children: <Widget>[
                 Text('¿Estás seguro de que quieres eliminar la promoción "${promotion.name}"?'),
-                const Text('Esta acción no se puede deshacer y también eliminará los cupones asociados (si la lógica del backend lo maneja).'),
+                const Text('Esta acción no se puede deshacer.'),
               ],
             ),
           ),
@@ -205,12 +255,21 @@ class PromotionsPage extends StatelessWidget {
               child: const Text('Eliminar'),
               onPressed: () async {
                 Navigator.of(dialogContext).pop();
+                if (promotion.id == null) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Error: ID de promoción no disponible para eliminar.'), backgroundColor: Colors.red),
+                    );
+                  }
+                  return;
+                }
                 bool success = await controller.deletePromotion(promotion.id!);
-                if (success && context.mounted) {
+                if (!context.mounted) return;
+                if (success) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Promoción "${promotion.name}" eliminada.'), backgroundColor: Colors.green),
                   );
-                } else if (context.mounted) {
+                } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Error al eliminar: ${controller.errorMessage ?? "Error desconocido"}'), backgroundColor: Colors.red),
                   );

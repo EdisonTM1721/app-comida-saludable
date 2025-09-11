@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-//Modelo de datos para representar el perfil de un negocio/emprendedor
+// Modelo de datos para representar el perfil de un negocio/emprendedor
 class BusinessProfileModel {
   String? id;
   String? userId;
@@ -10,6 +10,8 @@ class BusinessProfileModel {
   String? address;
   String? openingHours;
   String? paymentMethods;
+  // Campo añadido para los enlaces de redes sociales
+  String? socialMediaLinks;
 
   // Constructor
   BusinessProfileModel({
@@ -21,9 +23,10 @@ class BusinessProfileModel {
     this.address,
     this.openingHours,
     this.paymentMethods,
+    // El nuevo campo se incluye en el constructor
+    this.socialMediaLinks,
   });
 
-  // --- AÑADE ESTE METODO ---
   factory BusinessProfileModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data();
     return BusinessProfileModel(
@@ -35,10 +38,11 @@ class BusinessProfileModel {
       address: data?['address'] as String?,
       openingHours: data?['openingHours'] as String?,
       paymentMethods: data?['paymentMethods'] as String?,
+      // Se lee el nuevo campo del documento de Firestore
+      socialMediaLinks: data?['socialMediaLinks'] as String?,
     );
   }
 
-  // --- FIN DEL METODO AÑADIDO ---
   Map<String, dynamic> toFirestore() {
     return {
       if (userId != null) 'userId': userId,
@@ -48,10 +52,11 @@ class BusinessProfileModel {
       if (address != null) 'address': address,
       if (openingHours != null) 'openingHours': openingHours,
       if (paymentMethods != null) 'paymentMethods': paymentMethods,
+      // Se escribe el nuevo campo en el mapa de Firestore
+      if (socialMediaLinks != null) 'socialMediaLinks': socialMediaLinks,
     };
   }
 
-  // --- AÑADE ESTE METODO ---
   BusinessProfileModel copyWith({
     String? id,
     String? userId,
@@ -61,6 +66,8 @@ class BusinessProfileModel {
     String? address,
     String? openingHours,
     String? paymentMethods,
+    // El método copyWith también se actualiza
+    String? socialMediaLinks,
   }) {
     return BusinessProfileModel(
       id: id ?? this.id,
@@ -71,8 +78,8 @@ class BusinessProfileModel {
       address: address ?? this.address,
       openingHours: openingHours ?? this.openingHours,
       paymentMethods: paymentMethods ?? this.paymentMethods,
+      // Se copia el valor del nuevo campo
+      socialMediaLinks: socialMediaLinks ?? this.socialMediaLinks,
     );
   }
-// --- FIN DEL METODO AÑADIDO ---
 }
-

@@ -5,19 +5,15 @@ import 'package:emprendedor/presentation/widgets/category_filter_widget.dart';
 import 'package:emprendedor/presentation/widgets/product_list_item.dart';
 import 'package:emprendedor/presentation/pages/product_form_page.dart';
 
-// Nueva clase para la lista de productos
 class ProductListPage extends StatelessWidget {
   const ProductListPage({super.key});
 
-  // Metodo para mostrar el panel de opciones de agregar producto
   void _showAddProductOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      // Hacemos el fondo del modal transparente
       backgroundColor: Colors.transparent,
       builder: (BuildContext bc) {
         return SafeArea(
-          // Envolvemos el contenido en un Container para darle estilo
           child: Container(
             color: Colors.transparent,
             child: Wrap(
@@ -46,9 +42,18 @@ class ProductListPage extends StatelessWidget {
                     title: const Text('Agregar Nuevo Producto'),
                     onTap: () {
                       Navigator.of(context).pop();
+
+                      // Get the existing controller instance from the parent context
+                      final productController = context.read<ProductController>();
+
+                      // Use ChangeNotifierProvider.value to provide the controller
+                      // This ensures that the page can listen for updates.
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (context) => const ProductFormPage(),
+                          builder: (context) => ChangeNotifierProvider.value(
+                            value: productController,
+                            child: const ProductFormPage(),
+                          ),
                         ),
                       );
                     },
@@ -62,7 +67,6 @@ class ProductListPage extends StatelessWidget {
     );
   }
 
-  // Construye la lista de productos
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -75,7 +79,6 @@ class ProductListPage extends StatelessWidget {
             return Center(child: Text('Error: ${controller.errorMessage}'));
           }
 
-          // Si no hay productos, muestra un mensaje
           return Column(
             children: [
               const CategoryFilterWidget(),

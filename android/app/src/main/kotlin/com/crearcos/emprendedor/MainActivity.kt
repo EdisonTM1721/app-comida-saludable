@@ -1,4 +1,4 @@
-package com.example.emprendedor
+package com.crearcos.emprendedor
 
 import io.flutter.embedding.android.FlutterActivity
 

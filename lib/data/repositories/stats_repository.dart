@@ -12,9 +12,14 @@ class StatsRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Obtener pedidos relevantes para estadísticas
-  Future<List<OrderModel>> getRelevantOrders({DateTime? startDate, DateTime? endDate}) async {
+  Future<List<OrderModel>> getRelevantOrders({
+    required String userId,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     Query query = _firestore
         .collection(AppConstants.ordersCollection)
+        .where('userId', isEqualTo: userId)
         .where('status', isEqualTo: orderStatusToString(OrderStatus.delivered));
 
     // Aplicar filtros si se proporcionan
@@ -33,6 +38,7 @@ class StatsRepository {
 
   // Calcular estadísticas de ventas
   Future<StatisticsOverview> calculateStatisticsOverview({
+    required String userId,
     DateTime? filterStartDate,
     DateTime? filterEndDate,
   }) async {
@@ -40,7 +46,7 @@ class StatsRepository {
     final defaultEndDate = filterEndDate ?? DateTime.now();
 
     // Obtener los pedidos relevantes para calcular las estadísticas
-    final orders = await getRelevantOrders(startDate: defaultStartDate, endDate: defaultEndDate);
+    final orders = await getRelevantOrders(userId: userId, startDate: defaultStartDate, endDate: defaultEndDate);
 
     // Verificar si hay pedidos para calcular las estadísticas
     if (orders.isEmpty) {

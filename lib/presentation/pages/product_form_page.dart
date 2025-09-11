@@ -4,19 +4,15 @@ import 'package:provider/provider.dart';
 import 'package:emprendedor/data/models/product_model.dart';
 import 'package:emprendedor/presentation/controllers/product_controller.dart';
 
-// Nueva página para agregar o editar un producto
 class ProductFormPage extends StatefulWidget {
   final ProductModel? productToEdit;
 
-  // Constructor de la nueva página
   const ProductFormPage({super.key, this.productToEdit});
 
-  // Metodo para crear una nueva instancia de la página
   @override
   State<ProductFormPage> createState() => _ProductFormPageState();
 }
 
-// Estado de la nueva página
 class _ProductFormPageState extends State<ProductFormPage> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
@@ -25,15 +21,10 @@ class _ProductFormPageState extends State<ProductFormPage> {
   late TextEditingController _ingredientsController;
   late TextEditingController _caloriesController;
 
-  // Nueva variable para la categoría
   String? _selectedCategory;
   ProductStatus _selectedStatus = ProductStatus.available;
   String? _currentImageUrl;
 
-  // Lista de categorías predefinidas
-  final List<String> _exampleCategories = ['Ensaladas', 'Sopas', 'Sudados', 'Bebidas', 'Postres'];
-
-  // Inicialización del estado
   @override
   void initState() {
     super.initState();
@@ -42,27 +33,19 @@ class _ProductFormPageState extends State<ProductFormPage> {
     _descriptionController = TextEditingController(text: widget.productToEdit?.description ?? '');
     _ingredientsController = TextEditingController(text: widget.productToEdit?.ingredients.join(', ') ?? '');
     _caloriesController = TextEditingController(text: widget.productToEdit?.approxCalories?.toString() ?? '');
+
     _selectedCategory = widget.productToEdit?.category;
     _selectedStatus = widget.productToEdit?.status ?? ProductStatus.available;
     _currentImageUrl = widget.productToEdit?.imageUrl;
 
-    // Si el producto tiene una categoría definida, la agregamos a la lista
-    if (widget.productToEdit?.category != null && !_exampleCategories.contains(widget.productToEdit!.category)) {
-      _exampleCategories.add(widget.productToEdit!.category);
-    }
-    if (_selectedCategory == null && _exampleCategories.isNotEmpty) {
-      _selectedCategory = _exampleCategories.first;
-    }
-
-    // Limpieza del nuevo controlador
+    // Esta llamada es segura porque `context` ya tiene acceso al Provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        Provider.of<ProductController>(context, listen: false).clearSelectedImage();
+        context.read<ProductController>().clearSelectedImage();
       }
     });
   }
 
-  // Limpieza del estado
   @override
   void dispose() {
     _nameController.dispose();
@@ -73,16 +56,14 @@ class _ProductFormPageState extends State<ProductFormPage> {
     super.dispose();
   }
 
-  // Metodo para seleccionar una imagen
-  Future<void> _pickImage(ImageSource source, ProductController controller) async {
-    await controller.pickImage(source);
+  Future<void> _pickImage(ImageSource source) async {
+    await context.read<ProductController>().pickImage(source);
   }
 
-  // Metodo para enviar el formulario
   Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
+
+    // Aquí validamos que se haya seleccionado una categoría
     if (_selectedCategory == null || _selectedCategory!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Por favor selecciona una categoría.')),
@@ -90,15 +71,9 @@ class _ProductFormPageState extends State<ProductFormPage> {
       return;
     }
 
-    // Obtener los valores del formulario
     _formKey.currentState!.save();
-
-    final productController = Provider.of<ProductController>(context, listen: false);
-
-    // Obtener el valor calórico, asegurando que sea un número válido
     final double? approxCalories = double.tryParse(_caloriesController.text.trim());
 
-    // Crear el producto
     final product = ProductModel(
       id: widget.productToEdit?.id,
       name: _nameController.text.trim(),
@@ -112,7 +87,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
       approxCalories: approxCalories,
     );
 
-    // Guardar el producto
+    final productController = context.read<ProductController>();
     bool success;
     if (widget.productToEdit == null) {
       success = await productController.addProduct(product);
@@ -120,25 +95,28 @@ class _ProductFormPageState extends State<ProductFormPage> {
       success = await productController.updateProduct(product);
     }
 
-    // Mostrar mensaje de éxito o error
-    if (success && mounted) {
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Producto ${widget.productToEdit == null ? "agregado" : "actualizado"} con éxito')),
+        SnackBar(
+          content: Text(success ? 'Producto ${widget.productToEdit == null ? "agregado" : "actualizado"} con éxito' : 'Error: ${productController.errorMessage ?? "No se pudo guardar el producto"}'),
+          backgroundColor: success ? Colors.green : Colors.red,
+        ),
       );
-      Navigator.of(context).pop();
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${productController.errorMessage ?? "No se pudo guardar el producto"}')),
-      );
+      if (success) Navigator.of(context).pop();
     }
   }
 
-  // Construir la página
   @override
   Widget build(BuildContext context) {
-    final productController = Provider.of<ProductController>(context);
+    final controller = context.watch<ProductController>();
+    final categories = controller.categories;
 
-    // Si el producto tiene una imagen, la mostramos
+    // Si `_selectedCategory` es nulo, le asignamos la primera categoría disponible
+    // Esto evita el error de que el `value` no coincida con un `item`
+    if (_selectedCategory == null && categories.isNotEmpty) {
+      _selectedCategory = categories.first;
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.productToEdit == null ? 'Agregar Producto' : 'Editar Producto'),
@@ -149,94 +127,49 @@ class _ProductFormPageState extends State<ProductFormPage> {
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
+            children: [
               GestureDetector(
-                onTap: () {
-                  showModalBottomSheet(
-                    context: context,
-                    builder: (builder) {
-                      return SafeArea(
-                        child: Wrap(
-                          children: <Widget>[
-                            ListTile(
-                                leading: const Icon(Icons.photo_library),
-                                title: const Text('Galería'),
-                                onTap: () {
-                                  _pickImage(ImageSource.gallery, Provider.of<ProductController>(context, listen: false));
-                                  Navigator.of(context).pop();
-                                }),
-                            ListTile(
-                              leading: const Icon(Icons.photo_camera),
-                              title: const Text('Cámara'),
-                              onTap: () {
-                                _pickImage(ImageSource.camera, Provider.of<ProductController>(context, listen: false));
-                                Navigator.of(context).pop();
-                              },
-                            ),
-                          ],
+                onTap: () => showModalBottomSheet(
+                  context: context,
+                  builder: (_) => SafeArea(
+                    child: Wrap(
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.photo_library),
+                          title: const Text('Galería'),
+                          onTap: () {
+                            _pickImage(ImageSource.gallery);
+                            Navigator.of(context).pop();
+                          },
                         ),
-                      );
-                    },
-                  );
-                },
-                child: Consumer<ProductController>(
-                  builder: (context, controller, child) {
-                    Widget imageWidget;
-                    if (controller.selectedImageFile != null) {
-                      imageWidget = Image.file(
-                        controller.selectedImageFile!,
-                        height: 150,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      );
-                    } else if (_currentImageUrl != null && _currentImageUrl!.isNotEmpty) {
-                      imageWidget = Image.network(
-                        _currentImageUrl!,
-                        height: 150,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(),
-                      );
-                    } else {
-                      imageWidget = _buildImagePlaceholder();
-                    }
-                    return Container(
-                      height: 150,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(8.0),
-                        border: Border.all(color: Colors.grey),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(7.0),
-                        child: imageWidget,
-                      ),
-                    );
-                  },
+                        ListTile(
+                          leading: const Icon(Icons.photo_camera),
+                          title: const Text('Cámara'),
+                          onTap: () {
+                            _pickImage(ImageSource.camera);
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
+                child: _buildImageWidget(controller),
               ),
-              if (productController.selectedImageFile != null || (_currentImageUrl != null && _currentImageUrl!.isNotEmpty))
+              if (controller.selectedImageFile != null || (_currentImageUrl != null && _currentImageUrl!.isNotEmpty))
                 TextButton.icon(
                   icon: const Icon(Icons.clear, color: Colors.redAccent),
                   label: const Text('Quitar Imagen', style: TextStyle(color: Colors.redAccent)),
                   onPressed: () {
-                    productController.clearSelectedImage();
-                    setState(() {
-                      _currentImageUrl = null;
-                    });
+                    controller.clearSelectedImage();
+                    setState(() => _currentImageUrl = null);
                   },
                 ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: 'Nombre del Producto', border: OutlineInputBorder()),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor ingresa el nombre del producto';
-                  }
-                  return null;
-                },
+                validator: (value) => value == null || value.isEmpty ? 'Por favor ingresa el nombre del producto' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -244,17 +177,13 @@ class _ProductFormPageState extends State<ProductFormPage> {
                 decoration: const InputDecoration(labelText: 'Precio', prefixText: '\$', border: OutlineInputBorder()),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor ingresa el precio';
-                  }
-                  if (double.tryParse(value) == null) {
-                    return 'Por favor ingresa un número válido';
-                  }
+                  if (value == null || value.isEmpty) return 'Por favor ingresa el precio';
+                  if (double.tryParse(value) == null) return 'Por favor ingresa un número válido';
                   return null;
                 },
               ),
               const SizedBox(height: 12),
-               TextFormField(
+              TextFormField(
                 controller: _caloriesController,
                 decoration: const InputDecoration(labelText: 'Valor Calórico (kcal)', border: OutlineInputBorder()),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -266,28 +195,13 @@ class _ProductFormPageState extends State<ProductFormPage> {
                 maxLines: 3,
               ),
               const SizedBox(height: 12),
-              if (_exampleCategories.isNotEmpty)
+              if (categories.isNotEmpty)
                 DropdownButtonFormField<String>(
-                  key: ValueKey(_selectedCategory ?? 'empty_category_key'),
-                  initialValue: _selectedCategory,
+                  value: _selectedCategory,
                   decoration: const InputDecoration(labelText: 'Categoría', border: OutlineInputBorder()),
-                  items: _exampleCategories.map((String category) {
-                    return DropdownMenuItem<String>(
-                      value: category,
-                      child: Text(category),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      _selectedCategory = newValue;
-                    });
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor selecciona una categoría';
-                    }
-                    return null;
-                  },
+                  items: categories.map((category) => DropdownMenuItem(value: category, child: Text(category))).toList(),
+                  onChanged: (value) => setState(() => _selectedCategory = value),
+                  validator: (value) => value == null || value.isEmpty ? 'Por favor selecciona una categoría' : null,
                 )
               else
                 const Text('No hay categorías disponibles. Agrega una o define algunas.'),
@@ -302,26 +216,16 @@ class _ProductFormPageState extends State<ProductFormPage> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<ProductStatus>(
-                key: ValueKey(_selectedStatus),
-                initialValue: _selectedStatus,
+                value: _selectedStatus,
                 decoration: const InputDecoration(labelText: 'Estado', border: OutlineInputBorder()),
-                items: ProductStatus.values.map((ProductStatus status) {
-                  return DropdownMenuItem<ProductStatus>(
-                    value: status,
-                    child: Text(status.displayName),
-                  );
-                }).toList(),
-                onChanged: (ProductStatus? newValue) {
-                  if (newValue != null) {
-                    setState(() {
-                      _selectedStatus = newValue;
-                    });
-                  }
+                items: ProductStatus.values.map((status) => DropdownMenuItem(value: status, child: Text(status.displayName))).toList(),
+                onChanged: (status) {
+                  if (status != null) setState(() => _selectedStatus = status);
                 },
               ),
               const SizedBox(height: 24),
               ElevatedButton.icon(
-                icon: productController.isLoading
+                icon: controller.isLoading
                     ? Container(
                   width: 24,
                   height: 24,
@@ -330,7 +234,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
                 )
                     : const Icon(Icons.save),
                 label: Text(widget.productToEdit == null ? 'Guardar Producto' : 'Actualizar Producto'),
-                onPressed: productController.isLoading ? null : _submitForm,
+                onPressed: controller.isLoading ? null : _submitForm,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   textStyle: const TextStyle(fontSize: 16),
@@ -343,7 +247,41 @@ class _ProductFormPageState extends State<ProductFormPage> {
     );
   }
 
-  //Metodo para construir una imagen de relleno
+  Widget _buildImageWidget(ProductController controller) {
+    Widget imageWidget;
+    if (controller.selectedImageFile != null) {
+      imageWidget = Image.file(
+        controller.selectedImageFile!,
+        height: 150,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      );
+    } else if (_currentImageUrl != null && _currentImageUrl!.isNotEmpty) {
+      imageWidget = Image.network(
+        _currentImageUrl!,
+        height: 150,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _buildImagePlaceholder(),
+      );
+    } else {
+      imageWidget = _buildImagePlaceholder();
+    }
+    return Container(
+      height: 150,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(8.0),
+        border: Border.all(color: Colors.grey),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(7.0),
+        child: imageWidget,
+      ),
+    );
+  }
+
   Widget _buildImagePlaceholder() {
     return const Center(
       child: Column(

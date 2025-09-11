@@ -5,11 +5,14 @@ import 'package:image_picker/image_picker.dart';
 import 'package:emprendedor/data/models/product_model.dart';
 import 'package:emprendedor/data/repositories/product_repository.dart';
 import 'package:logging/logging.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 
 // Clase para el controlador de productos
 class ProductController extends ChangeNotifier {
   final Logger _logger = Logger('ProductController');
   final ProductRepository _productRepository = ProductRepository();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // Lista de productos
   List<ProductModel> _products = [];
@@ -36,10 +39,23 @@ class ProductController extends ChangeNotifier {
   // Suscripción a los productos
   StreamSubscription<List<ProductModel>>? _productsSubscription;
 
+  String? _userId;
+
   // Constructor
-  ProductController() {
-    fetchProducts();
-    fetchCategories();
+  ProductController({required String userId}) {
+    // Escucha los cambios de autenticación del usuario para obtener el ID
+    _auth.authStateChanges().listen((user) {
+      _userId = user?.uid;
+      if (_userId != null) {
+        fetchProducts();
+        fetchCategories();
+      } else {
+        // Limpia los datos si el usuario cierra sesión
+        _products = [];
+        _categories = ['Todas'];
+        notifyListeners();
+      }
+    });
   }
 
   // Destructor
@@ -54,8 +70,10 @@ class ProductController extends ChangeNotifier {
     return _products.isNotEmpty ? _products.first : null;
   }
 
-  // Metodo para obtener el producto más vendido
+  // Metodo para obtener los productos
   Future<void> fetchProducts({String? category}) async {
+    if (_userId == null) return;
+
     _setLoading(true);
     _clearError();
     final categoryToFetch = category ?? _selectedCategory;
@@ -63,8 +81,8 @@ class ProductController extends ChangeNotifier {
     try {
       final Stream<List<ProductModel>> productStream =
       categoryToFetch == 'Todas' || categoryToFetch.isEmpty
-          ? _productRepository.getProducts()
-          : _productRepository.getProductsByCategory(categoryToFetch);
+          ? _productRepository.getProducts(_userId!)
+          : _productRepository.getProductsByCategory(_userId!, categoryToFetch);
       _productsSubscription = productStream.listen((productsData) {
         _products = productsData;
         _setLoading(false);
@@ -83,8 +101,10 @@ class ProductController extends ChangeNotifier {
 
   // Metodo para obtener las categorías
   Future<void> fetchCategories() async {
+    if (_userId == null) return;
+
     try {
-      final categoriesData = await _productRepository.getCategories();
+      final categoriesData = await _productRepository.getCategories(_userId!);
       if (categoriesData.isNotEmpty && !categoriesData.contains('Todas')) {
         _categories = ['Todas', ...categoriesData];
       } else if (categoriesData.isEmpty && _categories.length > 1) {
@@ -131,10 +151,14 @@ class ProductController extends ChangeNotifier {
 
   // Metodo para agregar un producto
   Future<bool> addProduct(ProductModel product) async {
+    if (_userId == null) {
+      _setError('Usuario no autenticado.');
+      return false;
+    }
     _setLoading(true);
     _clearError();
     try {
-      await _productRepository.addProduct(product, _selectedImageFile);
+      await _productRepository.addProduct(product, _selectedImageFile, _userId!);
       clearSelectedImage();
       _logger.info("Producto '${product.name}' agregado.");
       _setLoading(false);
@@ -149,10 +173,14 @@ class ProductController extends ChangeNotifier {
 
   // Metodo para actualizar un producto
   Future<bool> updateProduct(ProductModel product) async {
+    if (_userId == null) {
+      _setError('Usuario no autenticado.');
+      return false;
+    }
     _setLoading(true);
     _clearError();
     try {
-      await _productRepository.updateProduct(product, _selectedImageFile);
+      await _productRepository.updateProduct(product, _selectedImageFile, _userId!);
       if (_selectedImageFile != null) {
         clearSelectedImage();
       }
@@ -169,10 +197,11 @@ class ProductController extends ChangeNotifier {
 
   // Metodo para cambiar el estado 'isFeatured' de un producto
   Future<void> toggleFeaturedStatus(String productId, bool newStatus) async {
+    if (_userId == null) return;
     _setLoading(true);
     _clearError();
     try {
-      await _productRepository.updateFeaturedStatus(productId, newStatus);
+      await _productRepository.updateFeaturedStatus(productId, newStatus, _userId!);
       _logger.info("Estado 'isFeatured' del producto '$productId' cambiado a $newStatus.");
     } catch (e, stackTrace) {
       _logger.severe("Error al cambiar estado 'isFeatured' para el producto '$productId'", e, stackTrace);
@@ -184,10 +213,11 @@ class ProductController extends ChangeNotifier {
 
   // Metodo para eliminar un producto
   Future<void> deleteProduct(String productId, String? imageUrl) async {
+    if (_userId == null) return;
     _setLoading(true);
     _clearError();
     try {
-      await _productRepository.deleteProduct(productId, imageUrl);
+      await _productRepository.deleteProduct(productId, imageUrl, _userId!);
       _logger.info("Producto con ID '$productId' eliminado.");
       _setLoading(false);
     } catch (e, stackTrace) {
@@ -199,10 +229,11 @@ class ProductController extends ChangeNotifier {
 
   // Metodo para cambiar el estado de un producto
   Future<void> toggleProductStatus(String productId, ProductStatus currentStatus) async {
+    if (_userId == null) return;
     _setLoading(true);
     _clearError();
     try {
-      await _productRepository.toggleProductStatus(productId, currentStatus);
+      await _productRepository.toggleProductStatus(productId, currentStatus, _userId!);
       _logger.info("Estado del producto '$productId' cambiado.");
     } catch (e, stackTrace) {
       _logger.severe("Error al cambiar estado del producto", e, stackTrace);

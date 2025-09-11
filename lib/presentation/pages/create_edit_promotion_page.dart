@@ -8,45 +8,35 @@ import 'package:emprendedor/presentation/controllers/promotion_controller.dart';
 class CreateEditPromotionPage extends StatefulWidget {
   final PromotionModel? promotionToEdit;
 
-  // Constructor de la nueva página
   const CreateEditPromotionPage({super.key, this.promotionToEdit});
 
-  // Método para crear una nueva instancia de la página
   @override
-  // CORREGIDO: Devolver la clase de estado pública
   CreateEditPromotionPageState createState() => CreateEditPromotionPageState();
 }
 
-// Estado de la nueva página
-// CORREGIDO: Hacer la clase de estado pública
 class CreateEditPromotionPageState extends State<CreateEditPromotionPage> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _nameController;
-  late TextEditingController _descriptionController;
-  late TextEditingController _discountValueController;
-  DiscountType _discountType = DiscountType.percentage; // Asegúrate de que DiscountType esté definido o importado
-  DateTime _startDate = DateTime.now();
-  DateTime _endDate = DateTime.now().add(const Duration(days: 30));
+  late final TextEditingController _nameController;
+  late final TextEditingController _descriptionController;
+  late final TextEditingController _discountValueController;
+  late DiscountType _discountType;
+  late DateTime _startDate;
+  late DateTime _endDate;
+  bool _isSubmitting = false;
 
-  // Verificar si la página está en modo de edición
   bool get isEditing => widget.promotionToEdit != null;
 
-  // Inicializar los controladores y los valores iniciales
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.promotionToEdit?.name ?? '');
     _descriptionController = TextEditingController(text: widget.promotionToEdit?.description ?? '');
     _discountValueController = TextEditingController(text: widget.promotionToEdit?.discountValue.toString() ?? '');
-    if (isEditing && widget.promotionToEdit != null) {
-      _discountType = widget.promotionToEdit!.discountType;
-      // ASUMIENDO que widget.promotionToEdit!.startDate y endDate SON de tipo Timestamp
-      _startDate = widget.promotionToEdit!.startDate.toDate(); // Sin check ni cast
-      _endDate = widget.promotionToEdit!.endDate.toDate();     // Sin check ni cast
-    }
+    _discountType = widget.promotionToEdit?.discountType ?? DiscountType.percentage;
+    _startDate = widget.promotionToEdit?.startDate.toDate() ?? DateTime.now();
+    _endDate = widget.promotionToEdit?.endDate.toDate() ?? DateTime.now().add(const Duration(days: 30));
   }
 
-  // Limpiar los controladores al salir de la página
   @override
   void dispose() {
     _nameController.dispose();
@@ -55,13 +45,11 @@ class CreateEditPromotionPageState extends State<CreateEditPromotionPage> {
     super.dispose();
   }
 
-  // Metodo para seleccionar la fecha
   Future<void> _selectDate(BuildContext context, {required bool isStart}) async {
     final initialDate = isStart ? _startDate : _endDate;
-    final firstDate = isStart ? DateTime.now() : _startDate; // Asegurar que la fecha de fin no sea antes que la de inicio
+    final firstDate = DateTime.now();
     final lastDate = DateTime(2030);
 
-    // 'context' es el del BuildContext del ListTile, válido antes del await.
     final picked = await showDatePicker(
       context: context,
       initialDate: initialDate,
@@ -69,7 +57,6 @@ class CreateEditPromotionPageState extends State<CreateEditPromotionPage> {
       lastDate: lastDate,
     );
 
-    // DESPUÉS del await, comprobar 'mounted'.
     if (!mounted || picked == null) return;
 
     setState(() {
@@ -80,78 +67,74 @@ class CreateEditPromotionPageState extends State<CreateEditPromotionPage> {
         }
       } else {
         _endDate = picked;
-        // Opcional: asegurar que la fecha de fin no sea anterior a la de inicio
         if (_endDate.isBefore(_startDate)) {
-          _startDate = _endDate.subtract(const Duration(days: 30)); // O alguna otra lógica
+          _startDate = _endDate.subtract(const Duration(days: 30));
         }
       }
     });
   }
 
-  // Metodo para enviar el formulario
-  void _submitForm() async { // Nota: El método es void, pero tiene async operations. Considerar Future<void>.
-    // No hay await antes de esta validación. 'context' es el del State.
+  Future<void> _submitForm() async {
+    if (_isSubmitting) return;
+
     if (!(_formKey.currentState?.validate() ?? false)) {
-      // No se necesita `if (mounted)` aquí si no hubo await previo en esta función
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Por favor, completa todos los campos requeridos.')),
       );
       return;
     }
 
-    // 'context' es el del State, usado para Provider ANTES del await.
+    if (!mounted) return;
+    setState(() { _isSubmitting = true; });
+
     final controller = Provider.of<PromotionController>(context, listen: false);
-
-    // Crear el objeto PromotionModel a partir de los datos del formulario
-    final promotion = PromotionModel(
-      id: widget.promotionToEdit?.id, // Puede ser null si es una nueva promoción
-      name: _nameController.text.trim(),
-      description: _descriptionController.text.trim(),
-      discountType: _discountType,
-      discountValue: double.tryParse(_discountValueController.text) ?? 0.0, // Más seguro con tryParse
-      startDate: Timestamp.fromDate(_startDate),
-      endDate: Timestamp.fromDate(_endDate),
-      status: PromotionStatus.active, // Asegúrate de que PromotionStatus esté definido o importado
-    );
-
-    // AWAIT para la operación del controlador
     bool success = false;
-    String? submissionError;
+    String? errorMessage;
 
     try {
-      success = isEditing
-          ? await controller.updatePromotion(promotion)
-          : await controller.createPromotion(promotion);
+      final promotion = PromotionModel(
+        id: widget.promotionToEdit?.id,
+        name: _nameController.text.trim(),
+        description: _descriptionController.text.trim(),
+        discountType: _discountType,
+        discountValue: double.tryParse(_discountValueController.text) ?? 0.0,
+        startDate: Timestamp.fromDate(_startDate),
+        endDate: Timestamp.fromDate(_endDate),
+        status: PromotionStatus.active, userId: '',
+      );
+
+      // Ahora llamamos al método unificado 'createOrUpdatePromotion'
+      success = await controller.createOrUpdatePromotion(promotion);
+      errorMessage = controller.errorMessage;
+
     } catch (e) {
-      submissionError = e.toString(); // Captura un error genérico si el controlador no lo maneja
-    }
-
-    // DESPUÉS del await, comprobar 'mounted'
-    if (!mounted) return;
-
-    // Usar el 'context' actual del State (que está 'mounted')
-    if (success) {
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Promoción ${isEditing ? "actualizada" : "creada"} con éxito!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${submissionError ?? controller.errorMessage ?? "Ocurrió un error."}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      errorMessage = 'Ocurrió un error inesperado: $e';
+    } finally {
+      if (mounted) {
+        setState(() { _isSubmitting = false; });
+        if (success) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Promoción ${isEditing ? "actualizada" : "creada"} con éxito!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: ${errorMessage ?? "Ocurrió un error."}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 
-  // Construir la página
   @override
   Widget build(BuildContext context) {
-    // Este 'context' es el del método build.
     return Scaffold(
       appBar: AppBar(
         title: Text(isEditing ? 'Editar Promoción' : 'Crear Promoción'),
@@ -165,7 +148,6 @@ class CreateEditPromotionPageState extends State<CreateEditPromotionPage> {
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: 'Nombre de la Promoción'),
-                // Corregido: Validator puede tomar un String? nullable
                 validator: (value) => (value == null || value.isEmpty) ? 'Ingresa un nombre.' : null,
               ),
               const SizedBox(height: 16),
@@ -179,13 +161,18 @@ class CreateEditPromotionPageState extends State<CreateEditPromotionPage> {
                 controller: _discountValueController,
                 decoration: InputDecoration(
                   labelText: 'Valor del Descuento',
-                  suffixText: _discountType == DiscountType.percentage ? '%' : '€',
+                  suffixText: _discountType == DiscountType.percentage ? '%' : '\$',
                 ),
                 keyboardType: TextInputType.number,
-                // Corregido: Validator puede tomar un String? nullable
                 validator: (value) {
                   if (value == null || value.isEmpty) return 'Ingresa un valor.';
-                  if (double.tryParse(value) == null) return 'Ingresa un número válido.';
+                  final parsedValue = double.tryParse(value);
+                  if (parsedValue == null || parsedValue < 0) {
+                    return 'Ingresa un número válido y positivo.';
+                  }
+                  if (_discountType == DiscountType.percentage && (parsedValue > 100)) {
+                    return 'El porcentaje no puede ser mayor a 100.';
+                  }
                   return null;
                 },
               ),
@@ -197,25 +184,15 @@ class CreateEditPromotionPageState extends State<CreateEditPromotionPage> {
                       title: const Text('Porcentaje'),
                       value: DiscountType.percentage,
                       groupValue: _discountType,
-                      // Corregido: onChanged puede recibir un valor nullable
-                      onChanged: (DiscountType? value) {
-                        if (value != null) {
-                          setState(() => _discountType = value);
-                        }
-                      },
+                      onChanged: (value) => value != null ? setState(() => _discountType = value) : null,
                     ),
                   ),
                   Expanded(
                     child: RadioListTile<DiscountType>(
                       title: const Text('Monto Fijo'),
-                      value: DiscountType.fixedAmount,
+                      value: DiscountType.fixed,
                       groupValue: _discountType,
-                      // Corregido: onChanged puede recibir un valor nullable
-                      onChanged: (DiscountType? value) {
-                        if (value != null) {
-                          setState(() => _discountType = value);
-                        }
-                      },
+                      onChanged: (value) => value != null ? setState(() => _discountType = value) : null,
                     ),
                   ),
                 ],
@@ -224,20 +201,25 @@ class CreateEditPromotionPageState extends State<CreateEditPromotionPage> {
               ListTile(
                 title: Text('Fecha de Inicio: ${_startDate.toLocal().toString().split(' ')[0]}'),
                 trailing: const Icon(Icons.calendar_today),
-                // Pasar el 'context' del build a _selectDate.
-                // _selectDate maneja el 'mounted' después de su propio await.
-                onTap: () => _selectDate(context, isStart: true),
+                onTap: _isSubmitting ? null : () => _selectDate(context, isStart: true),
               ),
               ListTile(
                 title: Text('Fecha de Fin: ${_endDate.toLocal().toString().split(' ')[0]}'),
                 trailing: const Icon(Icons.calendar_today),
-                onTap: () => _selectDate(context, isStart: false),
+                onTap: _isSubmitting ? null : () => _selectDate(context, isStart: false),
               ),
               const SizedBox(height: 24),
-              ElevatedButton(
-                // _submitForm maneja su propio mounted y context.
-                onPressed: _submitForm,
-                child: Text(isEditing ? 'Actualizar Promoción' : 'Crear Promoción'),
+              Center(
+                child: ElevatedButton(
+                  onPressed: _isSubmitting ? null : _submitForm,
+                  child: _isSubmitting
+                      ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                      : Text(isEditing ? 'Actualizar Promoción' : 'Crear Promoción'),
+                ),
               ),
             ],
           ),
@@ -246,4 +228,3 @@ class CreateEditPromotionPageState extends State<CreateEditPromotionPage> {
     );
   }
 }
-

@@ -77,4 +77,27 @@ class CouponModel {
       'isUsed': isUsed,
     };
   }
+
+  // Método copyWith para la gestión de estado
+  CouponModel copyWith({
+    String? id,
+    String? code,
+    String? promotionId,
+    double? discountValue,
+    Timestamp? validityDate,
+    double? minimumPurchase,
+    CouponStatus? status,
+    bool? isUsed,
+  }) {
+    return CouponModel(
+      id: id ?? this.id,
+      code: code ?? this.code,
+      promotionId: promotionId ?? this.promotionId,
+      discountValue: discountValue ?? this.discountValue,
+      validityDate: validityDate ?? this.validityDate,
+      minimumPurchase: minimumPurchase ?? this.minimumPurchase,
+      status: status ?? this.status,
+      isUsed: isUsed ?? this.isUsed,
+    );
+  }
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:emprendedor/presentation/controllers/profile_controller.dart';
-import 'package:emprendedor/data/models/business_profile_model.dart' as model;
 import 'package:emprendedor/presentation/pages/business_profile_edit_page.dart';
 import 'dart:convert';
 import 'package:logging/logging.dart';
@@ -29,14 +28,13 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   String _formatPaymentMethods(String? jsonString) {
-    if (jsonString == null || jsonString.isEmpty) {
+    if (jsonString == null || jsonString.isEmpty || jsonString.trim() == "[]") {
       return 'No se han establecido métodos de pago';
     }
     try {
       final decoded = json.decode(jsonString);
       _logger.fine('Decoded payment methods: $decoded');
       if (decoded is List && decoded.isNotEmpty) {
-        // ... (resto de la lógica)
         final List<String> methodNames = decoded.map((method) {
           if (method is Map<String, dynamic> && method.containsKey('name')) {
             String name = method['name'] as String;
@@ -57,22 +55,94 @@ class _ProfilePageState extends State<ProfilePage> {
       }
     } catch (e, stackTrace) {
       _logger.warning('Error al decodificar métodos de pago: $jsonString', e, stackTrace);
-      if (jsonString.trim() == "[]" || jsonString.trim().isEmpty) {
-        return 'No se han establecido métodos de pago';
-      }
+      return 'Error al cargar métodos de pago';
     }
-    return jsonString.isNotEmpty ? jsonString : 'No se han establecido métodos de pago';
+    return jsonString;
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<ProfileController>(
       builder: (context, controller, child) {
-        _logger.finer('Build: Controller BusinessProfile: ${controller.businessProfile?.name}, isLoading: ${controller.isLoading}, error: ${controller.errorMessage}'); // Nivel 'FINER' para logs muy frecuentes
+        _logger.finer('Build: Controller BusinessProfile: ${controller.businessProfile?.name}, isLoading: ${controller.isLoading}, error: ${controller.errorMessage}');
 
-        // Si no hay perfil, muestra un mensaje
-        final profile = controller.businessProfile ?? model.BusinessProfileModel(userId: '', name: '', description: null, address: null, openingHours: null, paymentMethods: null, profileImageUrl: null, id: null);
+        // Manejar el estado de carga
+        if (controller.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
+        // Manejar el estado de error
+        if (controller.errorMessage != null) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 80, color: Colors.red),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Error: ${controller.errorMessage}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      controller.fetchBusinessProfile();
+                    },
+                    child: const Text('Reintentar'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        final profile = controller.businessProfile;
+
+        // **Lógica de verificación de perfil corregida**
+        if (profile == null) {
+          // Si el perfil no existe, muestra un mensaje y un botón para crearlo
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.person_add_alt_1_outlined, size: 80, color: Colors.grey),
+                  const SizedBox(height: 20),
+                  const Text(
+                    '¡Aún no tienes un perfil de negocio! Haz clic en el botón para crear uno y empezar a vender.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 30),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      _logger.info('Redirigiendo a BusinessProfileEditPage para crear un nuevo perfil.');
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const BusinessProfileEditPage()),
+                      );
+                      if (result == true) {
+                        _logger.info('Perfil creado, recargando datos.');
+                        await controller.fetchBusinessProfile();
+                      }
+                    },
+                    icon: const Icon(Icons.add_circle_outline),
+                    label: const Text('Crear Perfil'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Si el perfil existe, muestra sus datos
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -125,12 +195,16 @@ class _ProfilePageState extends State<ProfilePage> {
               ElevatedButton.icon(
                 icon: const Icon(Icons.edit_note_outlined),
                 label: const Text('Editar Perfil'),
-                onPressed: () {
+                onPressed: () async {
                   _logger.info('Navegando a la página de edición de perfil.');
-                  Navigator.push(
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const BusinessProfileEditPage()),
                   );
+                  if (result == true) {
+                    _logger.info('Perfil guardado, recargando datos del perfil.');
+                    await controller.fetchBusinessProfile();
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 48),
@@ -143,7 +217,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // Construye un ListTile con información
   Widget _buildInfoTile({
     required BuildContext context,
     required IconData icon,
@@ -166,4 +239,3 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 }
-

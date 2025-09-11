@@ -6,10 +6,12 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:emprendedor/data/models/business_profile_model.dart';
+import 'package:logging/logging.dart';
+
+final Logger _logger = Logger('BusinessProfileEditPage');
 
 enum NotificationType { success, error, warning, info }
 
-// --- CLASE PARA EDITAR EL PERFIL DEL NEGOCIO ---
 class BusinessProfileEditPage extends StatefulWidget {
   const BusinessProfileEditPage({super.key});
 
@@ -17,7 +19,6 @@ class BusinessProfileEditPage extends StatefulWidget {
   State<BusinessProfileEditPage> createState() => _BusinessProfileEditPageState();
 }
 
-// --- ESTADO DE LA CLASE PARA EDITAR EL PERFIL DEL NEGOCIO ---
 class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
   final _auth = FirebaseAuth.instance;
   final _formKey = GlobalKey<FormState>();
@@ -26,9 +27,15 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
   late TextEditingController _descriptionController;
   late TextEditingController _addressController;
   late TextEditingController _openingHoursController;
+  // Controladores para los nuevos campos de redes sociales
+  late TextEditingController _facebookController;
+  late TextEditingController _instagramController;
+  late TextEditingController _twitterController;
 
   File? _selectedImageFile;
   bool _isSaving = false;
+
+  List<Map<String, dynamic>> _paymentMethods = [];
 
   @override
   void initState() {
@@ -37,24 +44,32 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
     _descriptionController = TextEditingController();
     _addressController = TextEditingController();
     _openingHoursController = TextEditingController();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        final profileController = Provider.of<ProfileController>(context, listen: false);
-        final profile = profileController.businessProfile;
-        if (profile != null) {
-          _updateTextControllers(profile);
-        } else {
-          profileController.fetchBusinessProfile();
+    // Inicialización de los nuevos controladores
+    _facebookController = TextEditingController();
+    _instagramController = TextEditingController();
+    _twitterController = TextEditingController();
+
+    final profileController = Provider.of<ProfileController>(context, listen: false);
+    final profile = profileController.businessProfile;
+    if (profile != null) {
+      _nameController.text = profile.name;
+      _descriptionController.text = profile.description ?? '';
+      _addressController.text = profile.address ?? '';
+      _openingHoursController.text = profile.openingHours ?? '';
+      _paymentMethods = _getPaymentMethodsList(profile.paymentMethods);
+
+      // Cargar los datos de redes sociales si existen
+      if (profile.socialMediaLinks != null) {
+        try {
+          final Map<String, dynamic> socialMedia = json.decode(profile.socialMediaLinks!);
+          _facebookController.text = socialMedia['facebook'] ?? '';
+          _instagramController.text = socialMedia['instagram'] ?? '';
+          _twitterController.text = socialMedia['twitter'] ?? '';
+        } catch (e) {
+          _logger.severe('Error al decodificar enlaces de redes sociales: $e');
         }
       }
-    });
-  }
-
-  void _updateTextControllers(BusinessProfileModel profile) {
-    _nameController.text = profile.name;
-    _descriptionController.text = profile.description ?? '';
-    _addressController.text = profile.address ?? '';
-    _openingHoursController.text = profile.openingHours ?? '';
+    }
   }
 
   @override
@@ -63,10 +78,13 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
     _descriptionController.dispose();
     _addressController.dispose();
     _openingHoursController.dispose();
+    // Liberar los nuevos controladores
+    _facebookController.dispose();
+    _instagramController.dispose();
+    _twitterController.dispose();
     super.dispose();
   }
 
-  // --- FUNCIÓN AUXILIAR PARA NOTIFICACIONES PERSONALIZADAS ---
   Future<void> _showCustomNotification({
     required BuildContext context,
     required String message,
@@ -96,8 +114,6 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
         backgroundColor = Colors.blue.shade600;
         break;
     }
-
-    // Usar el context original (el que tiene el Navigator principal) para mostrar
     showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -122,12 +138,10 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
       },
     );
     await Future.delayed(duration);
-
     if (mounted && Navigator.of(context, rootNavigator: true).canPop()) {
       Navigator.of(context, rootNavigator: true).pop();
     }
   }
-  // --- FIN DE FUNCIÓN AUXILIAR ---
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
@@ -139,7 +153,6 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
     }
   }
 
-  // --- FUNCIÓN PARA GUARDAR EL PERFIL DEL NEGOCIO ---
   Future<void> _saveProfile({bool migratingPaymentMethods = false}) async {
     if (!mounted) return;
     final currentContext = context;
@@ -148,7 +161,6 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
     }
     setState(() => _isSaving = true);
 
-    // No necesitamos currentContext aquí si no mostramos notificación
     final profileController = Provider.of<ProfileController>(currentContext, listen: false);
     final user = _auth.currentUser;
     BusinessProfileModel? currentProfile = profileController.businessProfile;
@@ -165,38 +177,39 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
       }
       return;
     }
-    // Si no hay perfil, crearlo
-    currentProfile ??= BusinessProfileModel(userId: user.uid, name: _nameController.text);
 
-    // Actualizar los campos del perfil
-    final profileDataToSave = currentProfile.copyWith(
+    final Map<String, String> socialMediaLinks = {
+      'facebook': _facebookController.text.trim(),
+      'instagram': _instagramController.text.trim(),
+      'twitter': _twitterController.text.trim(),
+    };
+
+    final profileDataToSave = (currentProfile ?? BusinessProfileModel(userId: user.uid, name: ''))
+        .copyWith(
       name: _nameController.text.trim(),
       description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
       address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
       openingHours: _openingHoursController.text.trim().isEmpty ? null : _openingHoursController.text.trim(),
+      paymentMethods: json.encode(_paymentMethods),
+      socialMediaLinks: json.encode(socialMediaLinks),
     );
 
-    // Actualizar el perfil
     bool success = await profileController.saveProfile(
       profileDataToSave,
       imageFile: _selectedImageFile,
     );
-
-    // Actualizar los métodos de pago si es necesario
     if (!mounted) return;
 
-    // Actualizar los métodos de pago si es necesario
     if (success) {
       _showCustomNotification(
         context: currentContext,
         message: 'Perfil actualizado con éxito',
         type: NotificationType.success,
       );
-      if (mounted) {
-        setState(() {
-          _selectedImageFile = null;
-        });
-      }
+      setState(() {
+        _selectedImageFile = null;
+      });
+      Navigator.of(currentContext).pop(true);
     } else {
       _showCustomNotification(
         context: currentContext,
@@ -205,58 +218,42 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
         duration: const Duration(seconds: 4),
       );
     }
-    // Volver a cargar el perfil
     if (mounted) {
       setState(() => _isSaving = false);
     }
   }
 
-  // --- FUNCIÓN PARA ACTUALIZAR LOS MÉTODOS DE PAGO ---
-  Future<bool> _updatePaymentMethods(List<Map<String, dynamic>> updatedMethodsList) async {
+  Future<bool> _updatePaymentMethods() async {
     if (!mounted) return false;
+    final currentContext = context;
     setState(() => _isSaving = true);
 
-    // No necesitamos currentContext aquí si no mostramos notificación
-    final profileController = Provider.of<ProfileController>(context, listen: false);
-    if (profileController.businessProfile == null) {
+    final profileController = Provider.of<ProfileController>(currentContext, listen: false);
+    final currentProfile = profileController.businessProfile;
+
+    if (currentProfile == null) {
       if (mounted) { setState(() => _isSaving = false); }
       return false;
     }
 
-    // Actualizar el perfil
-    final sanitizedMethodsList = updatedMethodsList.map((method) {
-      method['details'] = (method['details'] is Map<String, dynamic>)
-          ? method['details'] as Map<String, dynamic>
-          : <String, dynamic>{};
-      return method;
-    }).toList();
-
-    // No necesitamos currentContext aquí si no mostramos notificación
-    final updatedProfile = profileController.businessProfile!.copyWith(
-      paymentMethods: json.encode(sanitizedMethodsList),
+    final updatedProfile = currentProfile.copyWith(
+      paymentMethods: json.encode(_paymentMethods),
     );
 
-    // Actualizar el perfil
     bool success = await profileController.saveProfile(updatedProfile, imageFile: null);
-
-    // Volver a cargar el perfil
     if (!mounted) return false;
+
     if (mounted) { setState(() => _isSaving = false); }
     return success;
   }
-  // --- FUNCIÓN PARA ACTUALIZAR EL PERFIL DEL NEGOCIO ---
+
   Future<void> _addPaymentMethod() async {
     if (!mounted) return;
     final currentAddMethodContext = context;
-    final profileController = Provider.of<ProfileController>(currentAddMethodContext, listen: false);
-    final currentProfile = profileController.businessProfile;
-    if (currentProfile == null) return;
-
-    final currentMethods = _getPaymentMethodsList(currentProfile.paymentMethods);
 
     String? selectedMethodName = await showDialog<String>(
       context: currentAddMethodContext,
-      builder: (BuildContext dialogContext) { // Este es el context del diálogo de selección
+      builder: (BuildContext dialogContext) {
         return SimpleDialog(
           title: const Text('Añadir método de pago'),
           children: <Widget>[
@@ -270,27 +267,29 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
         );
       },
     );
+
     if (!mounted) return;
-
     if (selectedMethodName != null) {
-      final newMethod = {'name': selectedMethodName, 'details': <String, dynamic>{}};
-      if (!currentMethods.any((method) => method['name'] == selectedMethodName)) {
-        currentMethods.add(newMethod);
+      final profileController = Provider.of<ProfileController>(currentAddMethodContext, listen: false);
 
-        bool success = await _updatePaymentMethods(currentMethods);
+      if (!_paymentMethods.any((method) => method['name'] == selectedMethodName)) {
+        setState(() {
+          _paymentMethods.add({'name': selectedMethodName, 'details': <String, dynamic>{}});
+        });
 
+        bool success = await _updatePaymentMethods();
         if (!mounted) return;
 
         if (success) {
           _showCustomNotification(
             context: currentAddMethodContext,
-            message: '"${selectedMethodName ?? "Método"}" añadido con éxito.',
+            message: '"$selectedMethodName" añadido con éxito.',
             type: NotificationType.success,
           );
         } else {
           _showCustomNotification(
             context: currentAddMethodContext,
-            message: 'Error al añadir "${selectedMethodName ?? "el método"}". ${profileController.errorMessage ?? "Intente de nuevo."}',
+            message: 'Error al añadir "$selectedMethodName". ${profileController.errorMessage ?? "Intente de nuevo."}',
             type: NotificationType.error,
             duration: const Duration(seconds: 4),
           );
@@ -305,13 +304,13 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
     }
   }
 
-  // --- FUNCIÓN PARA ACTUALIZAR EL PERFIL DEL NEGOCIO ---
   Future<void> _editPaymentMethod(Map<String, dynamic> methodToEdit) async {
     if (!mounted) return;
     final String name = methodToEdit['name'] as String;
     final Map<String, dynamic> details = (methodToEdit['details'] is Map<String, dynamic>)
         ? methodToEdit['details'] as Map<String, dynamic>
         : <String, dynamic>{};
+
     final accountController = TextEditingController(text: details['account'] as String? ?? '');
     final bankController = TextEditingController(text: details['bank'] as String? ?? '');
     final genericDetailController = TextEditingController(text: details['generic'] as String? ?? '');
@@ -325,25 +324,66 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: Text('Configurar "$name"'),
-          content: SingleChildScrollView( /* ... Contenido del diálogo ... */ ),
-          actions: <Widget>[ /* ... Acciones del diálogo ... */ ],
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (name == 'PayPal')
+                  TextFormField(
+                    controller: paypalEmailController,
+                    decoration: const InputDecoration(labelText: 'Correo electrónico de PayPal'),
+                    keyboardType: TextInputType.emailAddress,
+                  )
+                else if (name == 'Transferencia Bancaria' || name == 'Pago móvil')
+                  Column(
+                    children: [
+                      TextFormField(
+                        controller: bankController,
+                        decoration: const InputDecoration(labelText: 'Nombre del Banco'),
+                      ),
+                      const SizedBox(height: 10),
+                      TextFormField(
+                        controller: accountController,
+                        decoration: InputDecoration(labelText: name == 'Pago móvil' ? 'Número de Teléfono/CI' : 'Número de Cuenta'),
+                      ),
+                    ],
+                  )
+                else
+                  TextFormField(
+                    controller: genericDetailController,
+                    decoration: const InputDecoration(labelText: 'Detalles (opcional)'),
+                  ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Guardar'),
+            ),
+          ],
         );
       },
     );
 
-    if (!mounted) return;
+    if (!mounted) {
+      accountController.dispose();
+      bankController.dispose();
+      genericDetailController.dispose();
+      paypalEmailController.dispose();
+      return;
+    }
 
     if (saved == true) {
       final profileController = Provider.of<ProfileController>(currentEditMethodContext, listen: false);
-      final currentProfile = profileController.businessProfile;
-      if (currentProfile == null) return;
-
-      final currentMethods = _getPaymentMethodsList(currentProfile.paymentMethods);
-      final index = currentMethods.indexWhere((m) => m['name'] == name);
+      final index = _paymentMethods.indexWhere((m) => m['name'] == name);
 
       if (index != -1) {
         Map<String, String> newDetailsMap = {};
-        // ... Lógica para llenar newDetailsMap ...
         if (name == 'Transferencia Bancaria' || name == 'Pago móvil') {
           if (bankController.text.trim().isNotEmpty) newDetailsMap['bank'] = bankController.text.trim();
           if (accountController.text.trim().isNotEmpty) newDetailsMap['account'] = accountController.text.trim();
@@ -352,13 +392,17 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
         } else {
           if (genericDetailController.text.trim().isNotEmpty) newDetailsMap['generic'] = genericDetailController.text.trim();
         }
-        currentMethods[index]['details'] = newDetailsMap;
-        bool success = await _updatePaymentMethods(currentMethods);
+
+        setState(() {
+          _paymentMethods[index]['details'] = newDetailsMap;
+        });
+
+        bool success = await _updatePaymentMethods();
         if (!mounted) return;
 
-        if(success) {
+        if (success) {
           _showCustomNotification(
-            context: currentEditMethodContext, // Usar el context de la página
+            context: currentEditMethodContext,
             message: 'Detalles de "$name" actualizados con éxito.',
             type: NotificationType.success,
           );
@@ -379,11 +423,11 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
     paypalEmailController.dispose();
   }
 
-  // --- FUNCIÓN PARA ELIMINAR UN MÉTODO DE PAGO ---
   Future<void> _confirmDeleteMethod(Map<String, dynamic> methodToDelete) async {
     if (!mounted) return;
     final currentConfirmContext = context;
-    final String methodName = methodToDelete['name'] ?? 'el método';
+    final String methodName = methodToDelete['name'] as String? ?? 'el método';
+
     final confirmed = await showDialog<bool>(
       context: currentConfirmContext,
       builder: (BuildContext dialogContext) {
@@ -403,16 +447,16 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
     );
 
     if (!mounted) return;
-
     if (confirmed == true) {
       final profileController = Provider.of<ProfileController>(currentConfirmContext, listen: false);
-      final currentProfile = profileController.businessProfile;
-      if (currentProfile == null) return;
-      final currentMethods = _getPaymentMethodsList(currentProfile.paymentMethods);
-      currentMethods.removeWhere((m) => m['name'] == methodToDelete['name']);
 
-      bool success = await _updatePaymentMethods(currentMethods);
+      setState(() {
+        _paymentMethods.removeWhere((m) => m['name'] == methodToDelete['name']);
+      });
+
+      bool success = await _updatePaymentMethods();
       if (!mounted) return;
+
       if(success) {
         _showCustomNotification(
           context: currentConfirmContext,
@@ -430,9 +474,7 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
     }
   }
 
-  // --- FUNCIÓN PARA ACTUALIZAR EL PERFIL DEL NEGOCIO ---
   List<Map<String, dynamic>> _getPaymentMethodsList(String? jsonString) {
-    // ... (sin cambios)
     if (jsonString == null || jsonString.isEmpty) {
       return [];
     }
@@ -456,14 +498,13 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
           final newMethodsList = oldMethods.map((e) => {'name': e, 'details': <String, dynamic>{}}).toList();
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
-              // No mostramos notificación aquí para la migración automática, es una operación de fondo.
-              _updatePaymentMethods(newMethodsList);
+              _saveProfile(migratingPaymentMethods: true);
             }
           });
           return newMethodsList;
         }
       }
-      print('Error al decodificar métodos de pago: $e');
+      _logger.severe('Error al decodificar métodos de pago: $e');
     }
     return [];
   }
@@ -476,43 +517,28 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
       ),
       body: Consumer<ProfileController>(
         builder: (context, profileController, child) {
-          if (profileController.isLoading && profileController.businessProfile == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
           final profile = profileController.businessProfile;
 
-          if (profile == null) {
-
-            return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(profileController.errorMessage ?? "No se pudo cargar el perfil. Verifica tu conexión e intenta de nuevo.", textAlign: TextAlign.center),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        icon: const Icon(Icons.refresh),
-                        label: const Text("Intentar de Nuevo"),
-                        onPressed: () => profileController.fetchBusinessProfile(),
-                      )
-                    ],
-                  ),
-                )
-            );
-          }
-          // Actualizar los campos del perfil
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              if (_nameController.text != profile.name) _nameController.text = profile.name;
-              if (_descriptionController.text != (profile.description ?? '')) _descriptionController.text = profile.description ?? '';
-              if (_addressController.text != (profile.address ?? '')) _addressController.text = profile.address ?? '';
-              if (_openingHoursController.text != (profile.openingHours ?? '')) _openingHoursController.text = profile.openingHours ?? '';
+            if (mounted && profile != null) {
+              if (_nameController.text != profile.name) {
+                _nameController.text = profile.name;
+              }
+              if (_descriptionController.text != (profile.description ?? '')) {
+                _descriptionController.text = profile.description ?? '';
+              }
+              if (_addressController.text != (profile.address ?? '')) {
+                _addressController.text = profile.address ?? '';
+              }
+              if (_openingHoursController.text != (profile.openingHours ?? '')) {
+                _openingHoursController.text = profile.openingHours ?? '';
+              }
             }
           });
 
-          final List<Map<String, dynamic>> paymentMethods = _getPaymentMethodsList(profile.paymentMethods);
+          if (profileController.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
@@ -532,10 +558,10 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
                             backgroundColor: Colors.grey[200],
                             backgroundImage: _selectedImageFile != null
                                 ? FileImage(_selectedImageFile!)
-                                : (profile.profileImageUrl != null && profile.profileImageUrl!.isNotEmpty
+                                : (profile?.profileImageUrl != null && profile!.profileImageUrl!.isNotEmpty
                                 ? NetworkImage(profile.profileImageUrl!)
                                 : null) as ImageProvider?,
-                            child: (profile.profileImageUrl == null || profile.profileImageUrl!.isEmpty) && _selectedImageFile == null
+                            child: (profile?.profileImageUrl == null || profile!.profileImageUrl!.isEmpty) && _selectedImageFile == null
                                 ? Icon(Icons.business_outlined, size: 80, color: Colors.grey[600])
                                 : null,
                           ),
@@ -543,7 +569,7 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
                             bottom: 0,
                             right: 0,
                             child: CircleAvatar(
-                              backgroundColor: Theme.of(context).primaryColorLight.withOpacity(0.9),
+                              backgroundColor: Theme.of(context).primaryColorLight.withAlpha(229),
                               radius: 22,
                               child: Icon(Icons.camera_alt_outlined, color: Theme.of(context).primaryColorDark, size: 24),
                             ),
@@ -576,6 +602,39 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
                     decoration: const InputDecoration(labelText: 'Horarios de Atención', prefixIcon: Icon(Icons.access_time_outlined)),
                   ),
                   const SizedBox(height: 24),
+                  // Seccion de Redes Sociales añadida
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Redes Sociales', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _facebookController,
+                            decoration: const InputDecoration(labelText: 'Facebook URL', prefixIcon: Icon(Icons.facebook)),
+                            keyboardType: TextInputType.url,
+                          ),
+                          const SizedBox(height: 10),
+                          TextFormField(
+                            controller: _instagramController,
+                            decoration: const InputDecoration(labelText: 'Instagram URL', prefixIcon: Icon(Icons.camera_outlined)),
+                            keyboardType: TextInputType.url,
+                          ),
+                          const SizedBox(height: 10),
+                          TextFormField(
+                            controller: _twitterController,
+                            decoration: const InputDecoration(labelText: 'Twitter URL', prefixIcon: Icon(Icons.alternate_email)), // No hay un icono nativo de Twitter, se usa uno genérico
+                            keyboardType: TextInputType.url,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                   Card(
                     elevation: 2,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -586,44 +645,43 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
                         children: [
                           Text('Métodos de Pago Aceptados', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
                           const SizedBox(height: 12),
-                          if (paymentMethods.isNotEmpty)
+                          if (_paymentMethods.isNotEmpty)
                             ListView.separated(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
-                              itemCount: paymentMethods.length,
+                              itemCount: _paymentMethods.length,
                               separatorBuilder: (_, __) => const Divider(height: 1, thickness: 0.5),
                               itemBuilder: (context, index) {
-                                final method = paymentMethods[index];
+                                final method = _paymentMethods[index];
                                 final name = method['name'] as String? ?? 'Desconocido';
                                 final detailsMap = method['details'] as Map<String, dynamic>? ?? {};
-
                                 String detailText = 'Configurar detalles';
                                 IconData leadingIcon = Icons.payment_outlined;
 
                                 if (name == 'Efectivo') {
                                   leadingIcon = Icons.money_outlined;
-                                  detailText = detailsMap['generic']?.isNotEmpty == true ? detailsMap['generic'] : 'Aceptado';
+                                  detailText = detailsMap['generic']?.isNotEmpty == true ? detailsMap['generic']! : 'Aceptado';
                                 } else if (name == 'Tarjeta de Crédito') {
                                   leadingIcon = Icons.credit_card_outlined;
-                                  detailText = detailsMap['generic']?.isNotEmpty == true ? detailsMap['generic'] : 'Aceptada';
+                                  detailText = detailsMap['generic']?.isNotEmpty == true ? detailsMap['generic']! : 'Aceptada';
                                 } else if (name == 'Tarjeta de Débito') {
                                   leadingIcon = Icons.credit_score_outlined;
-                                  detailText = detailsMap['generic']?.isNotEmpty == true ? detailsMap['generic'] : 'Aceptada';
+                                  detailText = detailsMap['generic']?.isNotEmpty == true ? detailsMap['generic']! : 'Aceptada';
                                 } else if (name == 'PayPal') {
                                   leadingIcon = Icons.paypal_outlined;
-                                  detailText = detailsMap['paypalEmail']?.isNotEmpty == true ? "Email: ${detailsMap['paypalEmail']}" : 'Configurar Email de PayPal';
+                                  detailText = detailsMap['paypalEmail']?.isNotEmpty == true ? "Email: ${detailsMap['paypalEmail']!}" : 'Configurar Email de PayPal';
                                 } else if (name == 'Transferencia Bancaria') {
                                   leadingIcon = Icons.account_balance_outlined;
                                   detailText = detailsMap['bank']?.isNotEmpty == true
-                                      ? "Banco: ${detailsMap['bank']}, Cta: ${detailsMap['account'] ?? 'N/A'}"
+                                      ? "Banco: ${detailsMap['bank']!}, Cta: ${detailsMap['account'] ?? 'N/A'}"
                                       : 'Configurar detalles bancarios';
                                 } else if (name == 'Pago móvil') {
                                   leadingIcon = Icons.phone_android_outlined;
                                   detailText = detailsMap['bank']?.isNotEmpty == true
-                                      ? "Banco: ${detailsMap['bank']}, Telf/CI: ${detailsMap['account'] ?? 'N/A'}"
+                                      ? "Banco: ${detailsMap['bank']!}, Telf/CI: ${detailsMap['account'] ?? 'N/A'}"
                                       : 'Configurar detalles de pago móvil';
                                 } else {
-                                  detailText = detailsMap['generic']?.isNotEmpty == true ? detailsMap['generic'] : 'Detalles no configurados';
+                                  detailText = detailsMap['generic']?.isNotEmpty == true ? detailsMap['generic']! : 'Detalles no configurados';
                                 }
 
                                 return ListTile(

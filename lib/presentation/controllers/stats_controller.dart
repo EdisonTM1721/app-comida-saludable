@@ -1,6 +1,12 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:emprendedor/data/models/stats_model.dart';
+import 'package:emprendedor/data/models/product_model.dart';
+import 'package:emprendedor/data/models/promotion_model.dart';
 import 'package:emprendedor/data/repositories/stats_repository.dart';
+import 'package:emprendedor/data/repositories/product_repository.dart';
+import 'package:emprendedor/data/repositories/promotion_repository.dart';
 import 'package:emprendedor/services/report_exporter_service.dart';
 import 'package:logging/logging.dart';
 
@@ -10,7 +16,10 @@ class StatsController extends ChangeNotifier {
 
   // Repositorios y servicios
   final StatsRepository _statsRepository = StatsRepository();
+  final ProductRepository _productRepository = ProductRepository();
+  final PromotionRepository _promotionRepository = PromotionRepository();
   final ReportExporterService _reportExporterService = ReportExporterService();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // Datos de estadísticas
   StatisticsOverview? _statisticsOverview;
@@ -36,27 +45,56 @@ class StatsController extends ChangeNotifier {
   Map<int, int> _peakSalesHours = {};
   Map<int, int> get peakSalesHours => _peakSalesHours;
 
+  // Productos más vendidos
+  List<ProductModel> _topProducts = [];
+  List<ProductModel> get topProducts => _topProducts;
+
+  // Promociones
+  List<PromotionModel> _promotions = [];
+  List<PromotionModel> get promotions => _promotions;
+
+  StreamSubscription? _promotionsSubscription;
+
+  String? _userId;
+
   // Constructor
-  StatsController() {
-    final today = DateTime.now();
-    _selectedDateRange = DateTimeRange(
-      start: today.subtract(const Duration(days: 30)),
-      end: today,
-    );
-    fetchStatistics();
+  StatsController({required String userId}) {
+    _auth.authStateChanges().listen((user) {
+      _userId = user?.uid;
+      if (_userId != null) {
+        final today = DateTime.now();
+        _selectedDateRange = DateTimeRange(
+          start: today.subtract(const Duration(days: 30)),
+          end: today,
+        );
+        fetchStatistics();
+        _fetchPromotions();
+      } else {
+        _statisticsOverview = StatisticsOverview.empty();
+        _peakSalesHours = {};
+        _topProducts = [];
+        _promotions = [];
+        _promotionsSubscription?.cancel();
+        notifyListeners();
+      }
+    });
   }
 
   // Métodos para interactuar con la base de datos
   Future<void> fetchStatistics() async {
+    if (_userId == null) return;
+
     _setLoading(true);
     _clearError();
     notifyListeners();
     try {
       _statisticsOverview = await _statsRepository.calculateStatisticsOverview(
+        userId: _userId!,
         filterStartDate: _selectedDateRange?.start,
         filterEndDate: _selectedDateRange?.end,
       );
       await _calculatePeakSalesHours();
+      await _fetchTopProducts();
     } catch (e, stackTrace) {
       _logger.severe('Error al cargar estadísticas', e, stackTrace);
       _setError("Error al calcular estadísticas: ${e.toString()}");
@@ -69,8 +107,11 @@ class StatsController extends ChangeNotifier {
 
   // Métodos para interactuar con la base de datos
   Future<void> _calculatePeakSalesHours() async {
+    if (_userId == null) return;
+
     try {
       final allOrders = await _statsRepository.getRelevantOrders(
+        userId: _userId!,
         startDate: _selectedDateRange?.start,
         endDate: _selectedDateRange?.end,
       );
@@ -84,6 +125,27 @@ class StatsController extends ChangeNotifier {
       _logger.severe("Error al calcular horarios de mayor venta", e, stackTrace);
       _peakSalesHours = {};
     }
+  }
+
+  // Métodos para interactuar con la base de datos
+  Future<void> _fetchTopProducts() async {
+    if (_statisticsOverview == null || _statisticsOverview!.topProducts.isEmpty) {
+      _topProducts = [];
+      return;
+    }
+
+    final topProductIds = _statisticsOverview!.topProducts.map((p) => p.productId).toList();
+    _topProducts = await _productRepository.getProductsByIds(topProductIds, _userId!);
+  }
+
+  // Métodos para interactuar con la base de datos
+  void _fetchPromotions() {
+    _promotionsSubscription = _promotionRepository.getPromotions(_userId!).listen((promotions) {
+      _promotions = promotions;
+      notifyListeners();
+    }, onError: (e, stackTrace) {
+      _logger.severe("Error al cargar promociones", e, stackTrace);
+    });
   }
 
   // Métodos para interactuar con la interfaz de usuario
@@ -140,11 +202,9 @@ class StatsController extends ChangeNotifier {
     // Exportar el reporte
     try {
       if (format.toLowerCase() == 'excel') {
-        await _reportExporterService.exportToExcel(
-            _statisticsOverview!, "reporte_estadisticas_tienda");
+        await _reportExporterService.exportToExcel(_statisticsOverview!, "reporte_estadisticas_tienda");
       } else if (format.toLowerCase() == 'pdf') {
-        await _reportExporterService.exportToPdf(
-            _statisticsOverview!, "reporte_estadisticas_tienda");
+        await _reportExporterService.exportToPdf(_statisticsOverview!, "reporte_estadisticas_tienda");
       } else {
         throw Exception("Formato de exportación no soportado: $format");
       }
