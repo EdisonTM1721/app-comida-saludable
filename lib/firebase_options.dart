@@ -58,6 +58,4 @@ class DefaultFirebaseOptions {
     iosBundleId: 'com.crearcos.emprendedor',
   );
 
-  // Configuración para iOS
-
 }

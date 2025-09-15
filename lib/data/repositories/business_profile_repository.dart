@@ -2,13 +2,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:emprendedor/data/models/business_profile_model.dart';
 import 'package:logging/logging.dart';
 
+// Clase para el repositorio de perfiles de negocio
 final Logger logger = Logger('BusinessProfileRepository');
-
 class BusinessProfileRepository {
   final _firestore = FirebaseFirestore.instance;
 
   late final CollectionReference<Map<String, dynamic>> _businessProfilesCollection;
 
+  // Constructor
   BusinessProfileRepository() {
     _businessProfilesCollection = _firestore.collection('business_profiles');
   }
@@ -33,7 +34,6 @@ class BusinessProfileRepository {
     }
   }
 
-  // --- CORRECCIÓN CRÍTICA ---
   // El método ahora devuelve el modelo de perfil con el ID asignado.
   Future<BusinessProfileModel> createBusinessProfile(BusinessProfileModel profile) async {
     if (profile.userId == null || profile.userId!.isEmpty) {

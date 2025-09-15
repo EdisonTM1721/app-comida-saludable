@@ -4,15 +4,19 @@ import 'package:emprendedor/data/models/product_model.dart';
 import 'package:emprendedor/presentation/controllers/product_controller.dart';
 import 'package:emprendedor/presentation/pages/product_form_page.dart';
 
+// Nueva clase para el widget de lista de productos
 class ProductListItem extends StatelessWidget {
   final ProductModel product;
 
+  // Constructor de la clase
   const ProductListItem({super.key, required this.product});
 
+  // Metodo para construir el widget de lista de productos
   @override
   Widget build(BuildContext context) {
     final productController = Provider.of<ProductController>(context, listen: false);
 
+    // Contenido del widget
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Padding(
@@ -107,7 +111,6 @@ class ProductListItem extends StatelessWidget {
                     const Text('Destacado', style: TextStyle(fontSize: 14)),
                     Switch(
                       value: product.isFeatured,
-                      // Cambiado de activeColor a activeThumbColor
                       onChanged: (newValue) {
                         productController.toggleFeaturedStatus(product.id!, newValue);
                       },

@@ -1,18 +1,19 @@
-// Archivo: order_list_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:emprendedor/presentation/controllers/order_controller.dart';
 import 'package:emprendedor/presentation/widgets/order_list_item.dart';
 import 'package:emprendedor/presentation/pages/order_detail_page.dart';
 
+// Nueva página para mostrar la lista de pedidos
 class OrderListPage extends StatefulWidget {
   const OrderListPage({super.key});
 
+  // Metodo para crear una nueva instancia de la página
   @override
   State<OrderListPage> createState() => _OrderListPageState();
 }
 
+// Estado de la nueva página
 class _OrderListPageState extends State<OrderListPage> {
   @override
   void initState() {
@@ -24,6 +25,7 @@ class _OrderListPageState extends State<OrderListPage> {
     });
   }
 
+  // Construir la página
   @override
   Widget build(BuildContext context) {
     return Scaffold(

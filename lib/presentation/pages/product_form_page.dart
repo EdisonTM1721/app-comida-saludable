@@ -6,15 +6,19 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 
+// Formulario para agregar o editar un producto
 class ProductFormPage extends StatefulWidget {
   final ProductModel? productToEdit;
 
+  // Construye el widget
   const ProductFormPage({super.key, this.productToEdit});
 
+  // Estado del widget
   @override
   State<ProductFormPage> createState() => _ProductFormPageState();
 }
 
+// Estado del widget
 class _ProductFormPageState extends State<ProductFormPage> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
@@ -28,6 +32,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
 
   bool _loadingUser = true;
 
+  // Inicialización de controladores en initState
   @override
   void initState() {
     super.initState();
@@ -69,6 +74,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
     });
   }
 
+  // Limpieza de controladores en dispose
   @override
   void dispose() {
     _nameController.dispose();
@@ -79,6 +85,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
     super.dispose();
   }
 
+  // Abre la galería para seleccionar una imagen
   Future<void> _pickImage() async {
     final productController = Provider.of<ProductController>(context, listen: false);
     final picker = ImagePicker();
@@ -89,6 +96,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
     }
   }
 
+  // Guarda el producto
   void _saveProduct() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -123,6 +131,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
     }
   }
 
+  // Construye el widget
   @override
   Widget build(BuildContext context) {
     final productController = context.watch<ProductController>();
@@ -133,6 +142,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
       );
     }
 
+    // Muestra el formulario
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.productToEdit == null ? 'Agregar Producto' : 'Editar Producto'),

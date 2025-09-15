@@ -134,9 +134,7 @@ class OrderListItem extends StatelessWidget {
         return Colors.green;
       case OrderStatus.cancelled:
         return Colors.red;
-      default:
-        return Colors.grey;
-    }
+      }
   }
 
   // Calcular color de texto para contraste con fondo

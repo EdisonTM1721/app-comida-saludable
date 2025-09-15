@@ -16,9 +16,11 @@ class HomeScreen extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
+        // Muestra un mensaje de error si ocurrió un problema al cargar el perfil
         final userName = profileController.businessProfile?.name;
         final greetingText = userName?.isNotEmpty == true ? 'Hola, $userName' : 'Hola, Emprendedor';
 
+        // Muestra el contenido principal
         return SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -88,6 +90,7 @@ class InfoCard extends StatelessWidget {
   final String value;
   final Color? valueColor;
 
+  // Constructor de la tarjeta
   const InfoCard({
     super.key,
     required this.title,
@@ -95,6 +98,7 @@ class InfoCard extends StatelessWidget {
     this.valueColor,
   });
 
+  // Construye la tarjeta
   @override
   Widget build(BuildContext context) {
     return Card(

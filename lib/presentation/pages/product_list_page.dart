@@ -5,9 +5,11 @@ import 'package:emprendedor/presentation/widgets/category_filter_widget.dart';
 import 'package:emprendedor/presentation/widgets/product_list_item.dart';
 import 'package:emprendedor/presentation/pages/product_form_page.dart';
 
+// Lista de productos
 class ProductListPage extends StatelessWidget {
   const ProductListPage({super.key});
 
+  // Construye el widget
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -89,7 +91,7 @@ class ProductListPage extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton.small(
         onPressed: () {
-          // ⭐ CAMBIO CLAVE AQUÍ: Llama a ProductFormPage directamente ⭐
+          // Llama a ProductFormPage directamente ⭐
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => const ProductFormPage(),

@@ -8,13 +8,16 @@ import 'package:logging/logging.dart';
 // Crear una instancia de Logger para esta página
 final Logger _logger = Logger('ProfilePage');
 
+// Página de perfil
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
+  // Construye el widget
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
+// Estado del widget
 class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
@@ -27,6 +30,7 @@ class _ProfilePageState extends State<ProfilePage> {
     });
   }
 
+  // Formatear los métodos de pago
   String _formatPaymentMethods(String? jsonString) {
     if (jsonString == null || jsonString.isEmpty || jsonString.trim() == "[]") {
       return 'No se han establecido métodos de pago';
@@ -60,6 +64,7 @@ class _ProfilePageState extends State<ProfilePage> {
     return jsonString;
   }
 
+  // Construye el widget
   @override
   Widget build(BuildContext context) {
     return Consumer<ProfileController>(
@@ -101,7 +106,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
         final profile = controller.businessProfile;
 
-        // **Lógica de verificación de perfil corregida**
         if (profile == null) {
           // Si el perfil no existe, muestra un mensaje y un botón para crearlo
           return Center(
@@ -217,6 +221,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  // Construye un ListTile con información
   Widget _buildInfoTile({
     required BuildContext context,
     required IconData icon,

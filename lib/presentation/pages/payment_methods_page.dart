@@ -1,19 +1,21 @@
-// Archivo: presentation/pages/payment_methods_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:emprendedor/data/models/payment_method_model.dart';
 import 'package:emprendedor/presentation/controllers/payment_method_controller.dart';
 
+// Método para mostrar una notificación
 enum NotificationType { success, error, warning, info }
 
+// Nueva página para mostrar la lista de métodos de pago
 class PaymentMethodsPage extends StatelessWidget {
   const PaymentMethodsPage({super.key});
 
+  // Metodo para crear una nueva instancia de la página
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<PaymentMethodController>();
 
+    // Muestra un indicador de carga si los datos aún no se han cargado.
     return Scaffold(
       appBar: AppBar(
         title: const Text('Métodos de Pago'),
@@ -54,6 +56,7 @@ class PaymentMethodsPage extends StatelessWidget {
                           icon = Icons.public;
                       }
 
+                      // Muestra los detalles del método de pago
                       return Card(
                         margin: const EdgeInsets.symmetric(vertical: 8),
                         child: ListTile(
@@ -117,6 +120,7 @@ class PaymentMethodsPage extends StatelessWidget {
     );
   }
 
+  // Muestra un diálogo para agregar un nuevo método de pago
   void _showAddOptions(BuildContext context, PaymentMethodController controller) {
     showModalBottomSheet(
       context: context,
@@ -171,6 +175,7 @@ class PaymentMethodsPage extends StatelessWidget {
     );
   }
 
+  // Muestra un diálogo para editar un método de pago
   void _editPaymentMethod(BuildContext context, PaymentMethodController controller, int index) {
     final item = controller.paymentMethods[index];
     if (item.name == 'Transferencia Bancaria') {
@@ -211,6 +216,7 @@ class PaymentMethodsPage extends StatelessWidget {
     }
   }
 
+  // Muestra un diálogo para editar los detalles de transferencia bancaria
   void _editBankTransferDetails(BuildContext context, PaymentMethodController controller, PaymentMethodModel item) {
     final Map<String, dynamic> currentData = item.details is Map ? item.details : {};
     final TextEditingController bankNameController = TextEditingController(text: currentData['banco'] ?? '');
@@ -219,6 +225,7 @@ class PaymentMethodsPage extends StatelessWidget {
     final TextEditingController emailController = TextEditingController(text: currentData['correo'] ?? '');
     final TextEditingController ownerNameController = TextEditingController(text: currentData['propietario'] ?? '');
 
+    // Muestra un diálogo para editar los detalles de transferencia bancaria
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -279,6 +286,7 @@ class PaymentMethodsPage extends StatelessWidget {
     );
   }
 
+  // Método para formatear los detalles del método de pago
   String _formatDetails(dynamic details) {
     if (details is Map) {
       String formatted = '';

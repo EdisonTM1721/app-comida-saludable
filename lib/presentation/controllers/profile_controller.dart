@@ -1,5 +1,3 @@
-// Archivo: profile_controller.dart
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -10,24 +8,29 @@ import 'package:logging/logging.dart';
 
 final Logger logger = Logger('ProfileController');
 
+// Clase para controlar el perfil del negocio
 class ProfileController extends ChangeNotifier {
   final _auth = FirebaseAuth.instance;
   final _storage = FirebaseStorage.instance;
   final BusinessProfileRepository _repository = BusinessProfileRepository();
 
+  // Propiedades privadas
   BusinessProfileModel? _businessProfile;
   bool _isLoading = false;
   String? _errorMessage;
   String? _userId;
 
+  // Propiedades públicas
   BusinessProfileModel? get businessProfile => _businessProfile;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get hasProfile => _businessProfile != null;
   String? get userId => _userId;
 
+  // Constructor
   ProfileController();
 
+  // Métodos públicos
   Future<void> setUserId(String userId) async {
     if (_userId == userId) {
       return;
@@ -37,6 +40,7 @@ class ProfileController extends ChangeNotifier {
     await fetchBusinessProfile();
   }
 
+  // Métodos privados
   Future<void> fetchBusinessProfile() async {
     logger.info('fetchBusinessProfile: Iniciando carga del perfil...');
     _isLoading = true;
@@ -74,6 +78,7 @@ class ProfileController extends ChangeNotifier {
     }
   }
 
+  // Métodos públicos
   Future<bool> saveProfile(BusinessProfileModel profileToSave, {File? imageFile}) async {
     logger.info('saveProfile: Iniciando guardado del perfil...');
     _isLoading = true;
@@ -113,6 +118,7 @@ class ProfileController extends ChangeNotifier {
         await _repository.createBusinessProfile(finalProfileToSave);
       }
 
+      // Actualizar el perfil localmente
       await fetchBusinessProfile();
 
       success = true;

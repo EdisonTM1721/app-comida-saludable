@@ -1,5 +1,3 @@
-// Archivo: promotion_controller.dart (CORREGIDO)
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:emprendedor/data/models/promotion_model.dart';

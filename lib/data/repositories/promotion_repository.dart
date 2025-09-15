@@ -80,7 +80,6 @@ class PromotionRepository {
     }
   }
 
-  // --- CORRECCIÓN CRÍTICA ---
   // Ahora el método verifica la propiedad del usuario antes de devolver el stream de cupones.
   Stream<List<CouponModel>> getCouponsForPromotion(String promotionId, String userId) {
     try {

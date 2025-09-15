@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:emprendedor/presentation/controllers/profile_controller.dart';
 
-
+// Clase para mostrar el perfil de negocio
 class BusinessProfilePage extends StatelessWidget {
   const BusinessProfilePage({super.key});
 
+  // Construye el widget
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -20,6 +21,7 @@ class BusinessProfilePage extends StatelessWidget {
             return const Text("No hay datos de perfil disponibles.");
           }
 
+          // Muestra los datos del perfil
           return SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -69,6 +71,7 @@ class BusinessProfilePage extends StatelessWidget {
     );
   }
 
+  // Construye una tarjeta de información
   Widget _buildProfileInfoCard({
     required IconData icon,
     required String title,

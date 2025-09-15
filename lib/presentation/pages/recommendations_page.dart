@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
-// Nueva clase para la página de recomendaciones
+// Página de recomendaciones
 class RecommendationsPage extends StatelessWidget {
+  const RecommendationsPage({super.key});
+
+
+  // Construye el widget
   @override
   Widget build(BuildContext context) {
 
@@ -29,7 +33,7 @@ class RecommendationsPage extends StatelessWidget {
               style: TextStyle(fontSize: 16),
             ),
             SizedBox(height: 20),
-            Container(
+            SizedBox(
               height: 300,
               child: BarChart(
                 BarChartData(

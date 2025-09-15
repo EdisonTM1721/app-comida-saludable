@@ -5,10 +5,11 @@ import 'package:emprendedor/data/models/promotion_model.dart';
 import 'package:emprendedor/presentation/pages/create_edit_promotion_page.dart';
 import 'package:emprendedor/presentation/pages/create_coupon_page.dart';
 
-// Esta página solo retorna el cuerpo de la vista, sin AppBar ni Scaffold.
+// Página de promociones
 class PromotionsPage extends StatelessWidget {
   const PromotionsPage({super.key});
 
+  // Navega a la página de edición de promoción
   void _navigateToEditPromotion(BuildContext context, PromotionModel promotion) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -17,6 +18,7 @@ class PromotionsPage extends StatelessWidget {
     );
   }
 
+  // Navega a la página de creación de promoción
   void _navigateToCreatePromotion(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -25,6 +27,7 @@ class PromotionsPage extends StatelessWidget {
     );
   }
 
+  // Navega a la página de creación de cupón
   void _navigateToCreateCoupon(BuildContext context, PromotionModel promotion) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -33,6 +36,7 @@ class PromotionsPage extends StatelessWidget {
     );
   }
 
+  // Muestra las opciones de agregar promoción
   void _showAddPromotionOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -76,6 +80,7 @@ class PromotionsPage extends StatelessWidget {
     );
   }
 
+  // Construye el widget
   @override
   Widget build(BuildContext context) {
     final promotionController = Provider.of<PromotionController>(context);
@@ -99,14 +104,13 @@ class PromotionsPage extends StatelessWidget {
     );
   }
 
+  // Construye la lista de promociones
   Widget _buildPromotionsList(BuildContext context, PromotionController controller) {
     if (controller.isLoading && controller.promotions.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // Esta es la lógica clave. Si la lista está vacía, siempre muestra el mensaje amigable.
-    // Solo muestra el error si la lista NO está vacía pero hay un error,
-    // o si el mensaje de error no está relacionado con los permisos.
+    // Si no hay promociones, muestra un mensaje amigable
     if (controller.promotions.isEmpty) {
       return const Center(
         child: SingleChildScrollView(
@@ -136,6 +140,7 @@ class PromotionsPage extends StatelessWidget {
       );
     }
 
+    // Si hay un mensaje de error, muestra el mensaje
     if (controller.errorMessage != null) {
       return Center(
         child: Padding(
@@ -149,6 +154,7 @@ class PromotionsPage extends StatelessWidget {
       );
     }
 
+    // Si hay promociones, muestra la lista
     return ListView.builder(
       padding: const EdgeInsets.only(bottom: 80),
       itemCount: controller.promotions.length,
@@ -226,6 +232,7 @@ class PromotionsPage extends StatelessWidget {
     );
   }
 
+  // Muestra un diálogo de confirmación para eliminar una promoción
   Future<void> _showDeleteConfirmDialog(BuildContext context, PromotionController controller, PromotionModel promotion) async {
     return showDialog<void>(
       context: context,

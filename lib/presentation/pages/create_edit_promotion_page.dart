@@ -8,12 +8,14 @@ import 'package:emprendedor/presentation/controllers/promotion_controller.dart';
 class CreateEditPromotionPage extends StatefulWidget {
   final PromotionModel? promotionToEdit;
 
+  // Constructor de la nueva página
   const CreateEditPromotionPage({super.key, this.promotionToEdit});
 
+  // Metodo para crear una nueva instancia de la página
   @override
   CreateEditPromotionPageState createState() => CreateEditPromotionPageState();
 }
-
+// Estado de la nueva página
 class CreateEditPromotionPageState extends State<CreateEditPromotionPage> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
@@ -26,6 +28,7 @@ class CreateEditPromotionPageState extends State<CreateEditPromotionPage> {
 
   bool get isEditing => widget.promotionToEdit != null;
 
+  // Inicialización de controladores
   @override
   void initState() {
     super.initState();
@@ -37,6 +40,7 @@ class CreateEditPromotionPageState extends State<CreateEditPromotionPage> {
     _endDate = widget.promotionToEdit?.endDate.toDate() ?? DateTime.now().add(const Duration(days: 30));
   }
 
+  // Limpieza de controladores
   @override
   void dispose() {
     _nameController.dispose();
@@ -74,6 +78,7 @@ class CreateEditPromotionPageState extends State<CreateEditPromotionPage> {
     });
   }
 
+  // Envía el formulario
   Future<void> _submitForm() async {
     if (_isSubmitting) return;
 
@@ -133,6 +138,7 @@ class CreateEditPromotionPageState extends State<CreateEditPromotionPage> {
     }
   }
 
+  // Construye el widget
   @override
   Widget build(BuildContext context) {
     return Scaffold(

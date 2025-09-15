@@ -1,5 +1,3 @@
-// Archivo: business_profile_edit_page.dart (CORREGIDO Y OPTIMIZADO)
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:emprendedor/presentation/controllers/profile_controller.dart';
@@ -9,8 +7,10 @@ import 'dart:io';
 import 'package:emprendedor/data/models/business_profile_model.dart';
 import 'package:emprendedor/presentation/pages/main_app_shell.dart';
 
+// Enum para los tipos de notificaciones
 enum NotificationType { success, error, warning, info }
 
+// Clase para controlar la edición del perfil de negocio
 class BusinessProfileEditPage extends StatefulWidget {
   const BusinessProfileEditPage({super.key});
 
@@ -18,6 +18,7 @@ class BusinessProfileEditPage extends StatefulWidget {
   State<BusinessProfileEditPage> createState() => _BusinessProfileEditPageState();
 }
 
+// Estado del widget
 class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
   final _auth = FirebaseAuth.instance;
   final _formKey = GlobalKey<FormState>();
@@ -30,7 +31,7 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
   File? _selectedImageFile;
   bool _isSaving = false;
 
-  // ⭐ CAMBIO CLAVE: Inicialización de controladores en initState
+  // Inicialización de controladores en initState
   @override
   void initState() {
     super.initState();
@@ -39,7 +40,7 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
     _addressController = TextEditingController();
     _openingHoursController = TextEditingController();
 
-    // ⭐ CORRECCIÓN: Usar addPostFrameCallback para inicializar controladores de forma segura
+    // Usar addPostFrameCallback para inicializar controladores de forma segura
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final profileController = Provider.of<ProfileController>(context, listen: false);
       if (profileController.businessProfile != null) {
@@ -52,6 +53,7 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
     });
   }
 
+  // Limpieza de controladores en dispose
   @override
   void dispose() {
     _nameController.dispose();
@@ -61,6 +63,7 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
     super.dispose();
   }
 
+  // Muestra una notificación personalizada
   Future<void> _showCustomNotification({
     required BuildContext context,
     required String message,
@@ -69,6 +72,7 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
   }) async {
     if (!mounted) return;
 
+    // Colores y iconos según el tipo de notificación
     IconData iconData;
     Color backgroundColor;
     Color iconColor = Colors.white;
@@ -91,6 +95,7 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
         break;
     }
 
+    // Muestra la notificación
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -106,6 +111,7 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
     );
   }
 
+  // Abre la galería para seleccionar una imagen
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
@@ -116,6 +122,7 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
     }
   }
 
+  // Guarda los cambios del perfil
   Future<void> _saveProfile() async {
     if (!mounted) return;
     final currentContext = context;
@@ -141,6 +148,7 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
       return;
     }
 
+    // Actualiza los datos del perfil
     final profileDataToSave = (currentProfile ?? BusinessProfileModel(userId: user.uid, name: ''))
         .copyWith(
       name: _nameController.text.trim(),
@@ -174,6 +182,7 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
     }
   }
 
+  // Construye el widget
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -182,14 +191,15 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
       ),
       body: Consumer<ProfileController>(
         builder: (context, profileController, child) {
-          // ⭐ Eliminado: Ya no se necesita el booleano `_isInitializing`. La lógica de carga
-          // se maneja en el `AuthWrapper` y los controladores se inicializan en `initState`.
+
+          // Muestra un indicador de carga si el controlador está cargando
           if (profileController.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
           final profile = profileController.businessProfile;
 
+          // Muestra un mensaje de error si hay uno
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Form(

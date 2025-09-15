@@ -1,5 +1,3 @@
-// Archivo: order_controller.dart
-
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:emprendedor/data/models/order_model.dart';
@@ -9,10 +7,12 @@ import 'package:logging/logging.dart';
 
 final Logger _logger = Logger('OrderController');
 
+// Clase para controlar los pedidos
 class OrderController extends ChangeNotifier {
   final OrderRepository _orderRepository = OrderRepository();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  // Propiedades privadas
   List<OrderModel> _orders = [];
   List<OrderModel> get orders => _orders;
 
@@ -28,18 +28,21 @@ class OrderController extends ChangeNotifier {
   String? _userId;
   StreamSubscription<List<OrderModel>>? _ordersSubscription;
 
+  // Constructor
   OrderController();
 
+  // Métodos públicos
   Future<void> setUserId(String userId) async {
     if (_userId == userId) {
       return;
     }
     _userId = userId;
-    // ⭐ CORRECCIÓN: Se eliminó la llamada a `fetchOrders()` de aquí.
-    // La carga se iniciará desde el `initState` de la página.
+
+    // Cancelar la suscripción anterior si existe
     await _ordersSubscription?.cancel();
   }
 
+  // Métodos privados
   void disposeController() {
     _ordersSubscription?.cancel();
     _orders = [];
@@ -47,18 +50,22 @@ class OrderController extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Propiedades calculadas
   double get totalVentas {
     return _orders.fold(0.0, (sum, order) => sum + order.totalPrice);
   }
 
+  // Cantidad de pedidos
   int get totalPedidos {
     return _orders.length;
   }
 
+  // Cantidad de pedidos activos
   int get activeOrders {
     return _orders.where((order) => order.status != OrderStatus.delivered && order.status != OrderStatus.cancelled).length;
   }
 
+  // Cantidad de pedidos entregados
   Future<void> fetchOrders() async {
     _logger.info("fetchOrders: Iniciando carga de pedidos...");
     if (_userId == null) {
@@ -66,6 +73,7 @@ class OrderController extends ChangeNotifier {
       return;
     }
 
+    // Cancelar la suscripción anterior si existe
     _setLoading(true);
     _clearError();
     try {
@@ -86,12 +94,14 @@ class OrderController extends ChangeNotifier {
     }
   }
 
+  // Cargar detalles del pedido
   Future<void> fetchOrderDetails(String orderId) async {
     if (_userId == null) {
       _setError("El ID de usuario no está disponible.");
       return;
     }
 
+    // Cancelar la suscripción anterior si existe
     _setLoading(true);
     _clearError();
     try {
@@ -105,12 +115,14 @@ class OrderController extends ChangeNotifier {
     }
   }
 
+  // Actualizar estado del pedido
   Future<bool> updateOrderStatus(String orderId, OrderStatus newStatus) async {
     if (_userId == null) {
       _setError("El ID de usuario no está disponible.");
       return false;
     }
 
+    // Cancelar la suscripción anterior si existe
     _clearError();
     try {
       await _orderRepository.updateOrderStatus(orderId, newStatus, _userId!);
@@ -122,17 +134,20 @@ class OrderController extends ChangeNotifier {
     }
   }
 
+  // Métodos de gestión de estado
   void _setLoading(bool value) {
     if (_isLoading == value) return;
     _isLoading = value;
     notifyListeners();
   }
 
+  // Métodos de gestión de errores
   void _setError(String? message) {
     _errorMessage = message;
     notifyListeners();
   }
 
+  // Métodos de gestión de datos
   void _clearError() {
     if (_errorMessage != null) {
       _errorMessage = null;
@@ -140,11 +155,13 @@ class OrderController extends ChangeNotifier {
     }
   }
 
+  // Métodos de gestión de selección de pedido
   void clearSelectedOrder() {
     _selectedOrder = null;
     notifyListeners();
   }
 
+  // Método de gestión de ciclo de vida
   @override
   void dispose() {
     disposeController();

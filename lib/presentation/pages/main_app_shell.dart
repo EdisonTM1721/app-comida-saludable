@@ -10,18 +10,23 @@ import 'package:emprendedor/presentation/pages/promotions_page.dart';
 import 'package:emprendedor/presentation/pages/business_profile_page.dart';
 import 'package:emprendedor/presentation/pages/settings_page.dart';
 
+// Configuración de registro
 final Logger logger = Logger('MainAppShellLogger');
 
+// Página principal de la aplicación
 class MainAppShell extends StatefulWidget {
   const MainAppShell({super.key});
 
+  // Metodo para crear una nueva instancia de la página
   @override
   State<MainAppShell> createState() => _MainAppShellState();
 }
 
+// Estado de la página principal de la aplicación
 class _MainAppShellState extends State<MainAppShell> {
   int _selectedIndex = 0;
 
+  // Lista de páginas
   final List<Widget> _pages = const [
     HomePage(),
     ProductListPage(),
@@ -31,6 +36,7 @@ class _MainAppShellState extends State<MainAppShell> {
     BusinessProfilePage(),
   ];
 
+  // Títulos de las páginas
   static const List<String> _pageTitles = [
     'Panel de Inicio',
     'Mis Productos',
@@ -40,8 +46,10 @@ class _MainAppShellState extends State<MainAppShell> {
     'Mi Perfil',
   ];
 
+  // Acciones de la barra de navegación
   late final Map<int, List<Widget>> _appBarActions;
 
+  // Inicialización de la barra de navegación
   @override
   void initState() {
     super.initState();
@@ -70,12 +78,14 @@ class _MainAppShellState extends State<MainAppShell> {
     };
   }
 
+  // Cambio de página
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
   }
 
+  // Construye el widget
   @override
   Widget build(BuildContext context) {
     return Scaffold(

@@ -51,6 +51,7 @@ class PromotionModel {
   final PromotionStatus status;
   final String userId;
 
+  // Constructor de la clase.
   PromotionModel({
     this.id,
     required this.name,

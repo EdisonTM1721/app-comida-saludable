@@ -1,5 +1,3 @@
-// Archivo: stats_controller.dart (CORREGIDO)
-
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -113,8 +111,7 @@ class StatsController extends ChangeNotifier {
 
     _setLoading(true);
     _clearError();
-    // NOTA: El `notifyListeners()` se llama dentro de `_setLoading()` y `_setError()`,
-    // por lo que no es necesario aquí.
+
     try {
       _statisticsOverview = await _statsRepository.calculateStatisticsOverview(
         userId: _userId!,

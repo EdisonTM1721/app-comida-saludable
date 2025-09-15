@@ -23,7 +23,8 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Clear previous selection and fetch new details
+
+      // Actualizar el estado del pedido
       final controller = Provider.of<OrderController>(context, listen: false);
       controller.clearSelectedOrder();
       controller.fetchOrderDetails(widget.orderId);
@@ -89,7 +90,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                 ),
                 const SizedBox(height: 16),
 
-                // Sección de rastreo del paquete (la nueva sección)
+                // Sección de rastreo del paquete de envío
                 _buildSectionTitle('Estado del Envío'),
                 Card(
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -144,7 +145,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(4),
                             child: Image.network(item.imageUrl!, fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
+                              errorBuilder: (_, _, _) => const Icon(Icons.broken_image),
                             ),
                           ),
                         )

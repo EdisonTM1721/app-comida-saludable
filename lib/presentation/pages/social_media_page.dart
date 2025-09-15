@@ -1,14 +1,14 @@
-// Archivo: presentation/pages/social_media_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:emprendedor/presentation/controllers/social_media_controller.dart';
 import 'package:emprendedor/data/models/social_media_model.dart';
 
+// Página de redes sociales
 class SocialMediaPage extends StatelessWidget {
   const SocialMediaPage({super.key});
 
+  // Construye el widget
   @override
   Widget build(BuildContext context) {
     // Aquí usamos Consumer para escuchar los cambios en el controlador
@@ -75,6 +75,7 @@ class SocialMediaPage extends StatelessWidget {
                   icon = Icons.public;
               }
 
+              // Aquí puedes personalizar la apariencia de cada tarjeta
               return Card(
                 margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                 child: ListTile(
@@ -114,6 +115,7 @@ class SocialMediaPage extends StatelessWidget {
     );
   }
 
+  // Muestra un diálogo para agregar redes sociales
   void _showAddOptions(BuildContext context) {
     final controller = context.read<SocialMediaController>();
     showModalBottomSheet(
@@ -153,6 +155,7 @@ class SocialMediaPage extends StatelessWidget {
     );
   }
 
+  // Muestra un diálogo para editar una URL de redes sociales
   void _editSocialMedia(BuildContext context, SocialMediaController controller, SocialMediaModel socialMedia) {
     final TextEditingController urlController = TextEditingController(text: socialMedia.url);
     showDialog(

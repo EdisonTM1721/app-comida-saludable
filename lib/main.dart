@@ -1,5 +1,3 @@
-// Archivo: main.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -14,11 +12,13 @@ import 'package:emprendedor/presentation/controllers/stats_controller.dart';
 import 'package:emprendedor/presentation/controllers/promotion_controller.dart';
 import 'package:emprendedor/presentation/controllers/profile_controller.dart';
 import 'package:emprendedor/presentation/controllers/social_media_controller.dart';
-import 'package:emprendedor/presentation/controllers/payment_method_controller.dart'; // Importación añadida
+import 'package:emprendedor/presentation/controllers/payment_method_controller.dart';
 import 'package:emprendedor/presentation/pages/auth_wrapper.dart';
 
+// Configuración de Firebase App Check
 final Logger logger = Logger('AppLogger');
 
+// Punto de entrada de la aplicación
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   _setupLogging();
@@ -53,6 +53,7 @@ Future<void> main() async {
   runApp(const MyApp());
 }
 
+// Configuración del registro de depuración
 void _setupLogging() {
   Logger.root.level = Level.ALL;
   Logger.root.onRecord.listen((record) {
@@ -62,6 +63,7 @@ void _setupLogging() {
   });
 }
 
+// Configuración de la aplicación
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -75,7 +77,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => PromotionController()),
         ChangeNotifierProvider(create: (_) => ProfileController()),
         ChangeNotifierProvider(create: (_) => SocialMediaController()),
-        ChangeNotifierProvider(create: (_) => PaymentMethodController()), // ¡Añade esta línea!
+        ChangeNotifierProvider(create: (_) => PaymentMethodController()),
       ],
       child: MaterialApp(
         title: 'App Emprendedor',

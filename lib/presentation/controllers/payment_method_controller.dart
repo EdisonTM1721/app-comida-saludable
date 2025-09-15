@@ -4,13 +4,17 @@ import 'package:logging/logging.dart';
 import 'package:emprendedor/data/repositories/payment_method_repository.dart';
 import 'package:emprendedor/data/models/payment_method_model.dart';
 
+
+// Clase para controlar los métodos de pago
 class PaymentMethodController extends ChangeNotifier {
   final Logger _logger = Logger('PaymentMethodController');
   final PaymentMethodRepository _repository = PaymentMethodRepository();
 
+  // Propiedades privadas
   List<PaymentMethodModel> _paymentMethods = [];
   List<PaymentMethodModel> get paymentMethods => _paymentMethods;
 
+  // Propiedades públicas
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
@@ -20,7 +24,7 @@ class PaymentMethodController extends ChangeNotifier {
   StreamSubscription<List<PaymentMethodModel>>? _paymentMethodsSubscription;
   String? _userId;
 
-  // ⭐ CORRECCIÓN: El método ahora es asincrónico y devuelve un Future<void> ⭐
+  // El método ahora es asincrónico y devuelve un Future<void> ⭐
   Future<void> setUserId(String? userId) async {
     if (_userId == userId) {
       return;
@@ -31,18 +35,21 @@ class PaymentMethodController extends ChangeNotifier {
     }
   }
 
+  // Método de gestión de ciclo de vida
   @override
   void dispose() {
     _paymentMethodsSubscription?.cancel();
     super.dispose();
   }
 
+  // Métodos privados
   Future<void> fetchPaymentMethods() async {
     if (_userId == null) {
       _setError('Usuario no autenticado.');
       return;
     }
 
+    // Cancelar la suscripción anterior si existe
     _setLoading(true);
     _clearError();
     await _paymentMethodsSubscription?.cancel();
@@ -63,6 +70,7 @@ class PaymentMethodController extends ChangeNotifier {
     }
   }
 
+  // Métodos públicos
   Future<void> addPaymentMethod(PaymentMethodModel paymentMethod) async {
     if (_userId == null) {
       _setError('Usuario no autenticado.');
@@ -81,6 +89,7 @@ class PaymentMethodController extends ChangeNotifier {
     }
   }
 
+  // Actualizar método de pago
   Future<void> updatePaymentMethod(PaymentMethodModel paymentMethod) async {
     if (_userId == null) {
       _setError('Usuario no autenticado.');
@@ -99,6 +108,7 @@ class PaymentMethodController extends ChangeNotifier {
     }
   }
 
+  // Eliminar método de pago
   Future<void> deletePaymentMethod(String docId) async {
     if (_userId == null) {
       _setError('Usuario no autenticado.');
@@ -117,16 +127,19 @@ class PaymentMethodController extends ChangeNotifier {
     }
   }
 
+  // Métodos de gestión de estado
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
   }
 
+  // Métodos de gestión de errores
   void _setError(String? message) {
     _errorMessage = message;
     notifyListeners();
   }
 
+  // Métodos de gestión de datos
   void _clearError() {
     _errorMessage = null;
     notifyListeners();

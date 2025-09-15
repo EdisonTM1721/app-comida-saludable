@@ -1,5 +1,3 @@
-// Archivo: register_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -10,15 +8,19 @@ import 'package:emprendedor/data/models/business_profile_model.dart';
 import 'package:emprendedor/data/repositories/business_profile_repository.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+// Registro de usuario
 final Logger logger = Logger('RegisterPage');
 
+// Página de registro
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
+  // Construye el widget
   @override
   State<RegisterPage> createState() => _RegisterPageState();
 }
 
+// Estado del widget de registro
 class _RegisterPageState extends State<RegisterPage> {
   final _auth = FirebaseAuth.instance;
   final _emailController = TextEditingController();
@@ -28,6 +30,7 @@ class _RegisterPageState extends State<RegisterPage> {
   String? _errorMessage;
   bool _isLoading = false;
 
+  // Limpia los controladores al salir
   @override
   void dispose() {
     _emailController.dispose();
@@ -36,6 +39,7 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
+  // Abre un enlace en una nueva pestaña
   Future<void> _launchURL(String urlString) async {
     final Uri url = Uri.parse(urlString);
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
@@ -45,6 +49,7 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
+  // Muestra un snackbar
   void _showSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -80,7 +85,7 @@ class _RegisterPageState extends State<RegisterPage> {
         if (!mounted) return;
         _showSnackBar('¡Registro exitoso! Por favor, inicia sesión.');
 
-        // ⭐ NAVEGACIÓN CORREGIDA: Navega a la página de login después de un breve retraso
+        // Navega a la página de login después de un breve retraso
         await Future.delayed(const Duration(seconds: 3));
         if (!mounted) return;
         Navigator.of(context).pushAndRemoveUntil(
@@ -180,6 +185,7 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
+  // Navega a la página de inicio de sesión
   void _navigateToLogin() {
     if (!mounted) return;
     Navigator.of(context).push(
@@ -187,6 +193,7 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
+  // Construye el widget
   @override
   Widget build(BuildContext context) {
     return Scaffold(

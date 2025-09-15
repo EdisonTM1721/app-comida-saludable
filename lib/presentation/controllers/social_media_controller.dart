@@ -4,13 +4,16 @@ import 'package:logging/logging.dart';
 import 'package:emprendedor/data/repositories/social_media_repository.dart';
 import 'package:emprendedor/data/models/social_media_model.dart';
 
+// Clase para controlar los enlaces de redes sociales
 class SocialMediaController extends ChangeNotifier {
   final Logger _logger = Logger('SocialMediaController');
   final SocialMediaRepository _repository = SocialMediaRepository();
 
+  // Lista de enlaces de redes sociales
   List<SocialMediaModel> _socialMediaList = [];
   List<SocialMediaModel> get socialMediaList => _socialMediaList;
 
+  // Propiedades públicas
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
@@ -20,7 +23,7 @@ class SocialMediaController extends ChangeNotifier {
   StreamSubscription<List<SocialMediaModel>>? _socialMediaSubscription;
   String? _userId;
 
-  // Corrected method signature
+  // Constructor
   Future<void> setUserId(String? userId) async {
     if (_userId == userId) {
       return;
@@ -31,6 +34,7 @@ class SocialMediaController extends ChangeNotifier {
     }
   }
 
+  // Método para limpiar la lista de enlaces de redes sociales
   @override
   void dispose() {
     _socialMediaSubscription?.cancel();
@@ -63,6 +67,7 @@ class SocialMediaController extends ChangeNotifier {
     }
   }
 
+  // Métodos para agregar, actualizar y eliminar enlaces de redes sociales
   Future<void> addSocialMedia(SocialMediaModel socialMedia) async {
     if (_userId == null) {
       _setError('Usuario no autenticado.');
@@ -82,6 +87,7 @@ class SocialMediaController extends ChangeNotifier {
     }
   }
 
+  // Método para actualizar un enlace de red social
   Future<void> updateSocialMedia(SocialMediaModel socialMedia) async {
     if (_userId == null) {
       _setError('Usuario no autenticado.');
@@ -101,6 +107,7 @@ class SocialMediaController extends ChangeNotifier {
     }
   }
 
+  // Método para eliminar un enlace de red social
   Future<void> deleteSocialMedia(String docId) async {
     if (_userId == null) {
       _setError('Usuario no autenticado.');
@@ -120,16 +127,19 @@ class SocialMediaController extends ChangeNotifier {
     }
   }
 
+  // Métodos privados
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
   }
 
+  // Métodos privados
   void _setError(String? message) {
     _errorMessage = message;
     notifyListeners();
   }
 
+  // Métodos privados
   void _clearError() {
     _errorMessage = null;
     notifyListeners();

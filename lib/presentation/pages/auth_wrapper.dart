@@ -15,23 +15,28 @@ import 'package:emprendedor/presentation/pages/main_app_shell.dart';
 
 final Logger logger = Logger('AuthWrapperLogger');
 
+// Clase para controlar el estado de autenticación
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
+  // Construye el widget
   @override
   State<AuthWrapper> createState() => _AuthWrapperState();
 }
 
+// Estado del widget
 class _AuthWrapperState extends State<AuthWrapper> {
   final Map<Type, ChangeNotifier> _controllers = {};
   String? _currentUserId;
 
+  // Método para limpiar los controladores
   @override
   void dispose() {
     _disposeControllers();
     super.dispose();
   }
 
+  // Método para limpiar los controladores
   void _disposeControllers() {
     for (var controller in _controllers.values) {
       controller.dispose();
@@ -39,6 +44,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
     _controllers.clear();
   }
 
+  // Construye el widget
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
@@ -55,6 +61,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
           return const LoginPage();
         }
 
+        // Obtener el ID del usuario autenticado
         final user = snapshot.data!;
         final userId = user.uid;
 
@@ -71,6 +78,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
           _controllers[PaymentMethodController] = PaymentMethodController();
         }
 
+        // Cargar los datos del usuario
         return FutureBuilder<void>(
           future: Future.wait<void>([
             (_controllers[ProductController] as ProductController).setUserId(userId),
@@ -90,6 +98,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
               return const Center(child: Text('Error al inicializar los datos del usuario.'));
             }
 
+            // Navegar a la página principal
             return MultiProvider(
               providers: [
                 ChangeNotifierProvider.value(

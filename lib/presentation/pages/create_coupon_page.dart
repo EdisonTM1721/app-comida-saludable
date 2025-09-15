@@ -10,7 +10,6 @@ class CreateCouponPage extends StatefulWidget {
   final PromotionModel promotion;
 
   // Constructor de la nueva página
-  // CORREGIDO: Se eliminó el parámetro redundante 'promotionId'
   const CreateCouponPage({super.key, required this.promotion});
 
   // Metodo para crear una nueva instancia de la página
@@ -29,10 +28,10 @@ class CreateCouponPageState extends State<CreateCouponPage> {
   @override
   void initState() {
     super.initState();
-    // Aquí podrías inicializar algo si fuera necesario usando widget.promotion
-    // Por ejemplo, si el cupón tuviera un código sugerido basado en la promoción.
+
   }
 
+  // Limpieza de controladores en dispose
   @override
   void dispose() {
     _couponCodeController.dispose();
@@ -40,6 +39,7 @@ class CreateCouponPageState extends State<CreateCouponPage> {
     super.dispose();
   }
 
+  // Selecciona la fecha
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -53,6 +53,7 @@ class CreateCouponPageState extends State<CreateCouponPage> {
     });
   }
 
+  // Envía el formulario
   Future<void> _submitForm() async {
     if (_isSubmitting) return;
 
@@ -78,6 +79,7 @@ class CreateCouponPageState extends State<CreateCouponPage> {
         return;
       }
 
+      // Crea un nuevo cupón
       final newCoupon = CouponModel(
         code: _couponCodeController.text.trim(),
         promotionId: widget.promotion.id!, // Correcto, usa el id del objeto promotion
@@ -88,6 +90,7 @@ class CreateCouponPageState extends State<CreateCouponPage> {
         isUsed: false,
       );
 
+      // Llama a la función para crear el cupón
       final promotionController = context.read<PromotionController>();
       final bool success = await promotionController.createCoupon(newCoupon);
 
@@ -116,6 +119,7 @@ class CreateCouponPageState extends State<CreateCouponPage> {
     }
   }
 
+  // Construye el widget
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -159,9 +163,7 @@ class CreateCouponPageState extends State<CreateCouponPage> {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    // Considera si este campo debe ser obligatorio o puede ser 0 por defecto
-                    // Si es opcional, `return null;` está bien.
-                    // Si es requerido, `return 'Ingresa un monto mínimo.';`
+
                     return null;
                   }
                   final number = double.tryParse(value);

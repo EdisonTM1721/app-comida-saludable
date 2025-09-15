@@ -6,14 +6,17 @@ import 'package:emprendedor/data/repositories/product_repository.dart';
 import 'package:logging/logging.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+// Clase para controlar los productos
 class ProductController extends ChangeNotifier {
   final Logger _logger = Logger('ProductController');
   final ProductRepository _productRepository = ProductRepository();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  // Propiedades privadas
   List<ProductModel> _products = [];
   List<ProductModel> get products => _products;
 
+  // Propiedades públicas
   final List<String> _categories = [
     'Todas',
     'Bebidas',
@@ -24,49 +27,60 @@ class ProductController extends ChangeNotifier {
   ];
   List<String> get categories => _categories;
 
+  // Propiedades públicas
   String _selectedCategory = 'Todas';
   String get selectedCategory => _selectedCategory;
 
+  // Propiedades públicas
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
+  // Propiedades públicas
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
+  // Propiedades públicas
   File? _selectedImageFile;
   File? get selectedImageFile => _selectedImageFile;
 
+  // Propiedades públicas
   StreamSubscription<List<ProductModel>>? _productsSubscription;
 
+  // Propiedades públicas
   String? _userId;
   String? get userId => _userId;
 
+  // Constructor
   ProductController();
 
-  // ---------- NUEVO MÉTODO ----------
+  // Métodos públicos
   void setSelectedImage(File? file) {
     _selectedImageFile = file;
     notifyListeners();
   }
 
+  // Métodos privados
   Future<void> setUserId(String userId) async {
     if (_userId == userId) return;
     _userId = userId;
     await fetchProducts();
   }
 
+  // Método de gestión de ciclo de vida
   @override
   void dispose() {
     _productsSubscription?.cancel();
     super.dispose();
   }
 
+  // Métodos privados
   Future<void> fetchProducts({String? category}) async {
     if (_userId == null) {
       _setError("Usuario no autenticado. No se pueden cargar productos.");
       return;
     }
 
+    // Cancelar la suscripción anterior si existe
     _setLoading(true);
     _clearError();
     final categoryToFetch = category ?? _selectedCategory;
@@ -99,6 +113,7 @@ class ProductController extends ChangeNotifier {
     }
   }
 
+  // Métodos públicos
   void setSelectedCategory(String category) {
     if (_selectedCategory == category) return;
     _selectedCategory = category;
@@ -106,11 +121,13 @@ class ProductController extends ChangeNotifier {
     fetchProducts(category: category);
   }
 
+  // Métodos públicos
   void clearSelectedImage() {
     _selectedImageFile = null;
     notifyListeners();
   }
 
+  // Métodos públicos
   Future<bool> addProduct(ProductModel product) async {
     if (_userId == null) {
       _setError('Usuario no autenticado.');
@@ -132,6 +149,7 @@ class ProductController extends ChangeNotifier {
     }
   }
 
+  // Métodos públicos
   Future<bool> updateProduct(ProductModel product) async {
     if (_userId == null) {
       _setError('Usuario no autenticado.');
@@ -153,6 +171,7 @@ class ProductController extends ChangeNotifier {
     }
   }
 
+  // Métodos públicos
   Future<void> toggleFeaturedStatus(String productId, bool newStatus) async {
     if (_userId == null) return;
     _setLoading(true);
@@ -168,6 +187,7 @@ class ProductController extends ChangeNotifier {
     }
   }
 
+  // Métodos públicos
   Future<void> deleteProduct(String productId, String? imageUrl) async {
     if (_userId == null) return;
     _setLoading(true);
@@ -183,6 +203,7 @@ class ProductController extends ChangeNotifier {
     }
   }
 
+  // Métodos públicos
   Future<void> toggleProductStatus(String productId, ProductStatus currentStatus) async {
     if (_userId == null) return;
     _setLoading(true);
@@ -198,18 +219,21 @@ class ProductController extends ChangeNotifier {
     }
   }
 
+  // Métodos públicos
   void _setLoading(bool value) {
     if (_isLoading == value) return;
     _isLoading = value;
     notifyListeners();
   }
 
+  // Métodos públicos
   void _setError(String? message) {
     if (_errorMessage == message) return;
     _errorMessage = message;
     notifyListeners();
   }
 
+  // Métodos públicos
   void _clearError() {
     if (_errorMessage == null) return;
     _errorMessage = null;

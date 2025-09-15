@@ -1,5 +1,3 @@
-// Archivo: data/repositories/product_repository.dart
-
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -16,8 +14,8 @@ class ProductRepository {
   // Obtener todos los productos
   Stream<List<ProductModel>> getProducts(String userId) {
     try {
-      // **CORRECCIÓN**: La ruta apunta a la colección de nivel superior 'products'
-      // y usa 'where' para filtrar por el userId del producto.
+
+      // Usa la colección de nivel superior.
       return _firestore
           .collection(AppConstants.productsCollection)
           .where('userId', isEqualTo: userId)
@@ -40,7 +38,7 @@ class ProductRepository {
       if (category.isEmpty || category.toLowerCase() == 'todas') {
         return getProducts(userId);
       }
-      // **CORRECCIÓN**: Usa la colección de nivel superior.
+      // Usa la colección de nivel superior.
       return _firestore
           .collection(AppConstants.productsCollection)
           .where('userId', isEqualTo: userId)
@@ -64,7 +62,7 @@ class ProductRepository {
       return [];
     }
     try {
-      // **CORRECCIÓN**: Usa la colección de nivel superior.
+      // Usa la colección de nivel superior.
       final snapshot = await _firestore
           .collection(AppConstants.productsCollection)
           .where('userId', isEqualTo: userId)
@@ -88,7 +86,7 @@ class ProductRepository {
         final snapshot = await ref.putFile(imageFile);
         imageUrl = await snapshot.ref.getDownloadURL();
       }
-      // **CORRECCIÓN**: Agrega el documento a la colección de nivel superior.
+      // Agrega el documento a la colección de nivel superior.
       await _firestore
           .collection(AppConstants.productsCollection)
           .add(product.copyWith(imageUrl: imageUrl, userId: userId).toFirestore());
@@ -102,7 +100,7 @@ class ProductRepository {
   // Actualizar un producto
   Future<void> updateProduct(ProductModel product, File? imageFile, String userId) async {
     try {
-      // **CORRECCIÓN**: Verifica el permiso en la colección de nivel superior.
+      // Verifica el permiso en la colección de nivel superior.
       final doc = await _firestore.collection(AppConstants.productsCollection).doc(product.id).get();
       if (!doc.exists || doc.data()?['userId'] != userId) {
         _logger.warning("Intento de actualizar un producto no autorizado: ${product.id} por el usuario $userId");
@@ -124,7 +122,7 @@ class ProductRepository {
         final snapshot = await uploadTask.whenComplete(() => {});
         imageUrl = await snapshot.ref.getDownloadURL();
       }
-      // **CORRECCIÓN**: Actualiza el documento en la colección de nivel superior.
+      // Actualiza el documento en la colección de nivel superior.
       await _firestore
           .collection(AppConstants.productsCollection)
           .doc(product.id)
@@ -139,7 +137,7 @@ class ProductRepository {
   // Eliminar un producto
   Future<void> deleteProduct(String productId, String? imageUrl, String userId) async {
     try {
-      // **CORRECCIÓN**: Verifica el permiso en la colección de nivel superior.
+      // Verifica el permiso en la colección de nivel superior.
       final orderDoc = await _firestore.collection(AppConstants.productsCollection).doc(productId).get();
       if (orderDoc.exists && orderDoc.data()?['userId'] == userId) {
         if (imageUrl != null && imageUrl.isNotEmpty) {
@@ -149,7 +147,7 @@ class ProductRepository {
             _logger.warning("No se pudo eliminar la imagen del producto $productId.");
           }
         }
-        // **CORRECCIÓN**: Elimina el documento de la colección de nivel superior.
+        // Elimina el documento de la colección de nivel superior.
         await _firestore
             .collection(AppConstants.productsCollection)
             .doc(productId)
@@ -168,10 +166,10 @@ class ProductRepository {
   // Actualizar el estado de un producto
   Future<void> updateFeaturedStatus(String productId, bool isFeatured, String userId) async {
     try {
-      // **CORRECCIÓN**: Verifica el permiso en la colección de nivel superior.
+      // Verifica el permiso en la colección de nivel superior.
       final doc = await _firestore.collection(AppConstants.productsCollection).doc(productId).get();
       if (doc.exists && doc.data()?['userId'] == userId) {
-        // **CORRECCIÓN**: Actualiza el documento en la colección de nivel superior.
+        // Actualiza el documento en la colección de nivel superior.
         await _firestore
             .collection(AppConstants.productsCollection)
             .doc(productId)
@@ -191,13 +189,13 @@ class ProductRepository {
   Future<void> toggleProductStatus(
       String productId, ProductStatus currentStatus, String userId) async {
     try {
-      // **CORRECCIÓN**: Verifica el permiso en la colección de nivel superior.
+      // Verifica el permiso en la colección de nivel superior.
       final doc = await _firestore.collection(AppConstants.productsCollection).doc(productId).get();
       if (doc.exists && doc.data()?['userId'] == userId) {
         final newStatus = currentStatus == ProductStatus.available
             ? ProductStatus.unavailable
             : ProductStatus.available;
-        // **CORRECCIÓN**: Actualiza el documento en la colección de nivel superior.
+        // Actualiza el documento en la colección de nivel superior.
         await _firestore
             .collection(AppConstants.productsCollection)
             .doc(productId)
@@ -216,7 +214,7 @@ class ProductRepository {
   // Obtener categorías
   Future<List<String>> getCategories(String userId) async {
     try {
-      // **CORRECCIÓN**: Usa la colección de nivel superior.
+      // Usa la colección de nivel superior.
       final snapshot = await _firestore
           .collection(AppConstants.productsCollection)
           .where('userId', isEqualTo: userId)

@@ -38,7 +38,8 @@ class SalesChartWidget extends StatelessWidget {
               enabled: true,
               touchTooltipData: BarTouchTooltipData(
                 getTooltipColor: (BarChartGroupData group) {
-                  return Colors.blueGrey.withOpacity(0.9);
+                  // Usar withAlpha para colores sRGB
+                  return Colors.blueGrey.withAlpha((255 * 0.9).round());
                 },
                 tooltipPadding: const EdgeInsets.all(8),
                 tooltipMargin: 8,
@@ -132,7 +133,8 @@ class SalesChartWidget extends StatelessWidget {
                 barRods: [
                   BarChartRodData(
                     toY: dataPoint.salesAmount,
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                    // Usar withAlpha para colores sRGB
+                    color: Theme.of(context).colorScheme.primary.withAlpha((255 * 0.8).round()),
                     width: interval == SalesInterval.daily ? 16 : (interval == SalesInterval.weekly ? 20 : 24),
                     borderRadius: const BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(4)),
                   ),

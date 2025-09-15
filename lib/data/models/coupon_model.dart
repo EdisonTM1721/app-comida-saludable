@@ -27,7 +27,7 @@ CouponStatus stringToCouponStatus(String? statusStr) {
   }
 }
 
-// Definición de la clase CouponModel
+// Definicion de la clase CouponModel
 class CouponModel {
   final String? id;
   final String code;
@@ -78,7 +78,7 @@ class CouponModel {
     };
   }
 
-  // Método copyWith para la gestión de estado
+  // Metodo copyWith para la gestión de estado
   CouponModel copyWith({
     String? id,
     String? code,

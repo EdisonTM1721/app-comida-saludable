@@ -5,15 +5,19 @@ import 'package:emprendedor/data/repositories/business_profile_repository.dart';
 import 'package:emprendedor/presentation/pages/login_page.dart';
 import 'package:emprendedor/presentation/pages/auth_wrapper.dart';
 
+// Nueva página para autenticación por teléfono
 class PhoneAuthPage extends StatefulWidget {
   final bool isLogin;
 
+  // Método para crear una nueva instancia de la página
   const PhoneAuthPage({super.key, required this.isLogin});
 
+  // Estado de la nueva página
   @override
   State<PhoneAuthPage> createState() => _PhoneAuthPageState();
 }
 
+// Estado de la nueva página
 class _PhoneAuthPageState extends State<PhoneAuthPage> {
   final _auth = FirebaseAuth.instance;
   final _phoneController = TextEditingController();
@@ -23,6 +27,7 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
   bool _otpSent = false;
   bool _isLoading = false;
 
+  // Lista de códigos de país
   final List<Map<String, String>> _countryCodes = [
     {'name': 'Argentina', 'code': '+54'},
     {'name': 'Bolivia', 'code': '+591'},
@@ -49,6 +54,7 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
   String _selectedCountryCode = '+593';
   String _selectedCountryName = 'Ecuador';
 
+  // Método para crear una nueva instancia de la página
   void _showSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -60,6 +66,7 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
     );
   }
 
+  // Método para seleccionar un país
   Future<void> _selectCountry() async {
     final selectedCountry = await showDialog<Map<String, String>>(
       context: context,
@@ -114,6 +121,7 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
       },
     );
 
+    // Actualiza el estado con el país seleccionado
     if (selectedCountry != null) {
       setState(() {
         _selectedCountryCode = selectedCountry['code']!;
@@ -178,6 +186,7 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
     }
   }
 
+  // Método para iniciar sesión con credenciales
   Future<void> _signInWithCredential(PhoneAuthCredential credential) async {
     setState(() {
       _isLoading = true;
@@ -211,7 +220,7 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
           );
         }
       }
-    } catch (e) { // Se usa un catch general para manejar cualquier excepción
+    } catch (e) {
       String message = 'Error: No se pudo completar la operación. Por favor, inténtalo de nuevo.';
       if (e is FirebaseAuthException) {
         // Maneja errores específicos de Firebase Auth si es necesario
@@ -235,6 +244,7 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
     }
   }
 
+  // Método para verificar el código de verificación
   Future<void> _verifyOtp() async {
     if (_otpController.text.trim().isEmpty) {
       _showSnackBar('Por favor, introduce el código de verificación.', isError: true);
@@ -247,6 +257,7 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
     await _signInWithCredential(credential);
   }
 
+  // Construir la página
   @override
   Widget build(BuildContext context) {
     return Scaffold(

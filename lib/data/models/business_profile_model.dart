@@ -1,5 +1,3 @@
-// Archivo: business_profile_model.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 // Modelo de datos para representar el perfil de un negocio/emprendedor
@@ -12,7 +10,6 @@ class BusinessProfileModel {
   String? address;
   String? openingHours;
   String? paymentMethods;
-  // ⭐ CORRECCIÓN: Usar un Map<String, String> para mayor flexibilidad ⭐
   Map<String, String> socialMediaLinks;
 
   // Constructor
@@ -25,10 +22,10 @@ class BusinessProfileModel {
     this.address,
     this.openingHours,
     this.paymentMethods,
-    // El nuevo campo se inicializa como un mapa vacío por defecto
     this.socialMediaLinks = const {},
   });
 
+  // Método para convertir el modelo en un mapa de Firestore
   factory BusinessProfileModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data();
     return BusinessProfileModel(
@@ -40,11 +37,11 @@ class BusinessProfileModel {
       address: data?['address'] as String?,
       openingHours: data?['openingHours'] as String?,
       paymentMethods: data?['paymentMethods'] as String?,
-      // ⭐ CORRECCIÓN: Se lee el mapa directamente de Firestore y se castea
       socialMediaLinks: Map<String, String>.from(data?['socialMediaLinks'] as Map? ?? {}),
     );
   }
 
+  // Método para convertir el modelo en un mapa de Firestore
   Map<String, dynamic> toFirestore() {
     return {
       if (userId != null) 'userId': userId,
@@ -54,11 +51,10 @@ class BusinessProfileModel {
       if (address != null) 'address': address,
       if (openingHours != null) 'openingHours': openingHours,
       if (paymentMethods != null) 'paymentMethods': paymentMethods,
-      // ⭐ CORRECCIÓN: Se escribe el mapa directamente a Firestore
       'socialMediaLinks': socialMediaLinks,
     };
   }
-
+  // Metodo para clonar el modelo
   BusinessProfileModel copyWith({
     String? id,
     String? userId,
@@ -68,9 +64,10 @@ class BusinessProfileModel {
     String? address,
     String? openingHours,
     String? paymentMethods,
-    // ⭐ CORRECCIÓN: El método copyWith también se actualiza para el mapa ⭐
     Map<String, String>? socialMediaLinks,
   }) {
+
+    // Se usa un operador de fusión nula para cada campo
     return BusinessProfileModel(
       id: id ?? this.id,
       userId: userId ?? this.userId,
@@ -80,7 +77,6 @@ class BusinessProfileModel {
       address: address ?? this.address,
       openingHours: openingHours ?? this.openingHours,
       paymentMethods: paymentMethods ?? this.paymentMethods,
-      // Se copia el valor del nuevo campo. Se usa un operador de fusión nula para el mapa
       socialMediaLinks: socialMediaLinks ?? this.socialMediaLinks,
     );
   }

@@ -85,7 +85,7 @@ class StatisticsPage extends StatelessWidget {
                   itemBuilder: (context, product) {
                     return ListTile(
                       leading: product.productImageUrl != null && product.productImageUrl!.isNotEmpty
-                          ? SizedBox(width: 40, height: 40, child: ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.network(product.productImageUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported))))
+                          ? SizedBox(width: 40, height: 40, child: ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.network(product.productImageUrl!, fit: BoxFit.cover, errorBuilder: (_, _, _) => const Icon(Icons.image_not_supported))))
                           : const Icon(Icons.fastfood, size: 30),
                       title: Text(product.productName, style: const TextStyle(fontWeight: FontWeight.w500)),
                       subtitle: Text('Vendidos: ${product.quantitySold}'),
