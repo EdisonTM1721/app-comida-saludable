@@ -22,10 +22,6 @@ class _OrderListPageState extends State<OrderListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mis Pedidos'),
-        backgroundColor: Colors.orange,
-      ),
       body: Consumer<OrderController>(
         builder: (context, controller, child) {
           // Mostrar indicador de carga
