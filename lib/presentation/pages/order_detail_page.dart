@@ -5,33 +5,26 @@ import 'package:emprendedor/data/models/order_model.dart';
 import 'package:emprendedor/presentation/controllers/order_controller.dart';
 import 'package:emprendedor/presentation/widgets/update_order_status_dialog.dart';
 
-// Nueva página para mostrar los detalles de un pedido
 class OrderDetailPage extends StatefulWidget {
   final String orderId;
 
-  // Constructor de la nueva página
   const OrderDetailPage({super.key, required this.orderId});
 
-  // Metodo para crear una nueva instancia de la página
   @override
   State<OrderDetailPage> createState() => _OrderDetailPageState();
 }
 
-// Estado de la nueva página
 class _OrderDetailPageState extends State<OrderDetailPage> {
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-
-      // Actualizar el estado del pedido
       final controller = Provider.of<OrderController>(context, listen: false);
       controller.clearSelectedOrder();
       controller.fetchOrderDetails(widget.orderId);
     });
   }
 
-  // Construir la página
   @override
   Widget build(BuildContext context) {
     final DateFormat dateFormat = DateFormat('dd MMM yyyy, hh:mm a');
@@ -41,7 +34,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         title: Consumer<OrderController>(
           builder: (context, controller, _) {
             return Text(controller.selectedOrder != null
-                ? 'Detalle Pedido #${controller.selectedOrder!.id?.substring(0, 6)}'
+                ? 'Pedido #${controller.selectedOrder!.id?.substring(0, 6)}'
                 : 'Cargando Pedido...');
           },
         ),
@@ -60,7 +53,6 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
             return const Center(child: Text('No se pudo cargar el pedido.'));
           }
 
-          // Mostrar los detalles del pedido
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -76,11 +68,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildDetailRow('ID Pedido:', order.id ?? 'N/A'),
-                        _buildDetailRow('Estado:', getOrderStatusDisplayString(order.status),
+                        _buildDetailRow('Estado:', _getOrderStatusText(order.status),
                             valueColor: _getStatusColor(order.status)),
-                        _buildDetailRow('Fecha Creación:', dateFormat.format(order.createdAt.toDate())),
-                        if (order.updatedAt != null)
-                          _buildDetailRow('Última Actualización:', dateFormat.format(order.updatedAt!.toDate())),
+                        _buildDetailRow('Fecha Pedido:', dateFormat.format(order.createdAt.toDate())),
                         if (order.deliveredAt != null)
                           _buildDetailRow('Fecha Entrega:', dateFormat.format(order.deliveredAt!.toDate())),
                         _buildDetailRow('Total:', '\$${order.totalPrice.toStringAsFixed(2)}', isBold: true),
@@ -90,8 +80,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                 ),
                 const SizedBox(height: 16),
 
-                // Sección de rastreo del paquete de envío
-                _buildSectionTitle('Estado del Envío'),
+                _buildSectionTitle('Rastreo de Pedido'),
                 Card(
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   elevation: 4,
@@ -99,23 +88,21 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(
-                          _getTrackingStatusText(order.status),
+                          _getTrackingDescription(order.status),
                           textAlign: TextAlign.center,
                           style: TextStyle(color: Colors.grey[700]),
                         ),
                         const SizedBox(height: 24),
-                        // Progress bar
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            _buildStatusColumn('Pagado', _getTrackingStepColor(order.status, 'pending')),
+                            _buildStatusColumn('Confirmado', _getTrackingStepColor(order.status, 'pending')),
                             Expanded(child: Divider(color: _getTrackingStepColor(order.status, 'preparing'))),
                             _buildStatusColumn('Preparando', _getTrackingStepColor(order.status, 'preparing')),
                             Expanded(child: Divider(color: _getTrackingStepColor(order.status, 'shipped'))),
-                            _buildStatusColumn('Enviado', _getTrackingStepColor(order.status, 'shipped')),
+                            _buildStatusColumn('En Camino', _getTrackingStepColor(order.status, 'shipped')),
                             Expanded(child: Divider(color: _getTrackingStepColor(order.status, 'delivered'))),
                             _buildStatusColumn('Entregado', _getTrackingStepColor(order.status, 'delivered')),
                           ],
@@ -126,8 +113,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                 ),
                 const SizedBox(height: 16),
 
-                // Mostrar los detalles de los productos
-                _buildSectionTitle('Productos Solicitados (${order.items.length})'),
+                _buildSectionTitle('Platos Solicitados (${order.items.length})'),
                 ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -145,14 +131,15 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(4),
                             child: Image.network(item.imageUrl!, fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => const Icon(Icons.broken_image),
+                              errorBuilder: (_, _, _) => const Icon(Icons.fastfood_outlined),
                             ),
                           ),
                         )
                             : const Icon(Icons.fastfood_outlined, size: 30),
                         title: Text(item.productName, style: const TextStyle(fontWeight: FontWeight.w500)),
                         subtitle: Text('Cantidad: ${item.quantity}\nPrecio Unit.: \$${item.priceAtPurchase.toStringAsFixed(2)}'),
-                        trailing: Text('\$${(item.quantity * item.priceAtPurchase).toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        trailing: Text('\$${(item.quantity * item.priceAtPurchase).toStringAsFixed(2)}',
+                            style: const TextStyle(fontWeight: FontWeight.bold)),
                         isThreeLine: true,
                       ),
                     );
@@ -160,7 +147,6 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                 ),
                 const SizedBox(height: 16),
 
-                // Mostrar los detalles del cliente
                 _buildSectionTitle('Información del Cliente'),
                 Card(
                   elevation: 2,
@@ -187,12 +173,10 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     onPressed: () {
                       showDialog(
                         context: context,
-                        builder: (BuildContext context) {
-                          return UpdateOrderStatusDialog(
-                            orderId: order.id!,
-                            currentStatus: order.status,
-                          );
-                        },
+                        builder: (_) => UpdateOrderStatusDialog(
+                          orderId: order.id!,
+                          currentStatus: order.status,
+                        ),
                       ).then((_) {
                         Provider.of<OrderController>(context, listen: false)
                             .fetchOrderDetails(widget.orderId);
@@ -200,8 +184,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     },
                     style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        textStyle: const TextStyle(fontSize: 16)
-                    ),
+                        textStyle: const TextStyle(fontSize: 16)),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -213,7 +196,6 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     );
   }
 
-  // Metodo para obtener un color según el estado del rastreo
   Color _getTrackingStepColor(OrderStatus currentStatus, String stepStatus) {
     final statusMap = {
       'pending': 1,
@@ -223,37 +205,34 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     };
     final currentStep = statusMap[currentStatus.name] ?? 0;
     final step = statusMap[stepStatus] ?? 0;
-    return currentStep >= step ? Colors.teal : Colors.grey;
+    return currentStep >= step ? Colors.orange : Colors.grey;
   }
 
-  // Metodo para obtener un texto descriptivo del estado del rastreo
-  String _getTrackingStatusText(OrderStatus status) {
+  String _getTrackingDescription(OrderStatus status) {
     switch (status) {
       case OrderStatus.pending:
-        return 'Su pago ha sido procesado. El pedido está pendiente de confirmación.';
+        return 'Hemos recibido tu pedido. Confirmando el pago...';
       case OrderStatus.preparing:
-        return 'Su pedido está siendo preparado para ser enviado.';
+        return 'Tu pedido está siendo preparado en la cocina.';
       case OrderStatus.shipped:
-        return 'Su pedido ha sido enviado y está en camino.';
+        return 'Tu pedido está en camino hacia tu domicilio.';
       case OrderStatus.delivered:
-        return 'Su pedido ha sido entregado exitosamente.';
+        return '¡Tu pedido ha sido entregado! Disfruta tu comida.';
       case OrderStatus.cancelled:
         return 'El pedido ha sido cancelado.';
-      }
+    }
   }
 
-  // Metodo para obtener una cadena de texto que representa el estado del pedido
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0, top: 8.0),
       child: Text(
         title,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.orange),
       ),
     );
   }
 
-  // Metodo para obtener una cadena de texto que representa el estado del pedido
   Widget _buildDetailRow(String label, String value, {Color? valueColor, bool isBold = false, int maxLines = 1}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -281,7 +260,6 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     );
   }
 
-  // Metodo para obtener un color según el estado del pedido
   Color _getStatusColor(OrderStatus status) {
     switch (status) {
       case OrderStatus.pending:
@@ -294,20 +272,34 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         return Colors.green.shade700;
       case OrderStatus.cancelled:
         return Colors.red.shade700;
-      }
+    }
   }
 
-  // Metodo para construir una columna de estado en el rastreo
   Widget _buildStatusColumn(String title, Color color) {
     return Column(
       children: [
         Icon(
-          color == Colors.teal ? Icons.check_circle : Icons.radio_button_unchecked,
+          color == Colors.orange ? Icons.check_circle : Icons.radio_button_unchecked,
           color: color,
         ),
         const SizedBox(height: 4),
         Text(title, style: TextStyle(color: color, fontSize: 12)),
       ],
     );
+  }
+
+  String _getOrderStatusText(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.pending:
+        return 'Pendiente';
+      case OrderStatus.preparing:
+        return 'Preparando';
+      case OrderStatus.shipped:
+        return 'En Camino';
+      case OrderStatus.delivered:
+        return 'Entregado';
+      case OrderStatus.cancelled:
+        return 'Cancelado';
+    }
   }
 }
