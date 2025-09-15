@@ -78,6 +78,7 @@ class CreateCouponPageState extends State<CreateCouponPage> {
         minimumPurchase: double.tryParse(_minPurchaseController.text) ?? 0.0,
         status: CouponStatus.active,
         isUsed: false,
+        userId: controller.userId, // ✅ agregado
       );
 
       final success = await controller.createCoupon(newCoupon);

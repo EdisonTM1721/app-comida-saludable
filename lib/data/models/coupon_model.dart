@@ -1,12 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// Definición pública de la enumeración CouponStatus
+// Enumeración del estado del cupón
 enum CouponStatus {
   active,
   expired,
 }
 
-// Funciones de ayuda públicas para la conversión de la enumeración
+// Conversión enum <-> String
 String couponStatusToString(CouponStatus status) {
   switch (status) {
     case CouponStatus.active:
@@ -16,7 +16,6 @@ String couponStatusToString(CouponStatus status) {
   }
 }
 
-// Función de ayuda pública para la conversión de String a CouponStatus
 CouponStatus stringToCouponStatus(String? statusStr) {
   switch (statusStr?.toLowerCase()) {
     case 'expired':
@@ -27,7 +26,7 @@ CouponStatus stringToCouponStatus(String? statusStr) {
   }
 }
 
-// Definicion de la clase CouponModel
+// Modelo de Cupón
 class CouponModel {
   final String? id;
   final String code;
@@ -37,8 +36,8 @@ class CouponModel {
   final double minimumPurchase;
   final CouponStatus status;
   final bool isUsed;
+  final String? userId;
 
-  // Constructor de la clase CouponModel
   CouponModel({
     this.id,
     required this.code,
@@ -48,11 +47,11 @@ class CouponModel {
     this.minimumPurchase = 0.0,
     required this.status,
     this.isUsed = false,
+    this.userId,
   });
 
-  // Factory constructor para crear una instancia desde un mapa
   factory CouponModel.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    final data = doc.data() as Map<String, dynamic>;
     return CouponModel(
       id: doc.id,
       code: data['code'] ?? '',
@@ -62,10 +61,10 @@ class CouponModel {
       minimumPurchase: (data['minimumPurchase'] ?? 0.0).toDouble(),
       status: stringToCouponStatus(data['status']),
       isUsed: data['isUsed'] ?? false,
+      userId: data['userId'],
     );
   }
 
-  // Metodo para convertir la instancia en un mapa
   Map<String, dynamic> toFirestore() {
     return {
       'code': code,
@@ -75,10 +74,10 @@ class CouponModel {
       'minimumPurchase': minimumPurchase,
       'status': couponStatusToString(status),
       'isUsed': isUsed,
+      'userId': userId,
     };
   }
 
-  // Metodo copyWith para la gestión de estado
   CouponModel copyWith({
     String? id,
     String? code,
@@ -88,6 +87,7 @@ class CouponModel {
     double? minimumPurchase,
     CouponStatus? status,
     bool? isUsed,
+    String? userId,
   }) {
     return CouponModel(
       id: id ?? this.id,
@@ -98,6 +98,7 @@ class CouponModel {
       minimumPurchase: minimumPurchase ?? this.minimumPurchase,
       status: status ?? this.status,
       isUsed: isUsed ?? this.isUsed,
+      userId: userId ?? this.userId,
     );
   }
 }

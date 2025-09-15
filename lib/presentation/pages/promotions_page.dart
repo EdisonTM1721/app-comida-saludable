@@ -5,11 +5,9 @@ import 'package:emprendedor/data/models/promotion_model.dart';
 import 'package:emprendedor/presentation/pages/create_edit_promotion_page.dart';
 import 'package:emprendedor/presentation/pages/create_coupon_page.dart';
 
-// Página de promociones
 class PromotionsPage extends StatelessWidget {
   const PromotionsPage({super.key});
 
-  // Navega a la página de edición de promoción
   void _navigateToEditPromotion(BuildContext context, PromotionModel promotion) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -18,7 +16,6 @@ class PromotionsPage extends StatelessWidget {
     );
   }
 
-  // Navega a la página de creación de promoción
   void _navigateToCreatePromotion(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -27,7 +24,6 @@ class PromotionsPage extends StatelessWidget {
     );
   }
 
-  // Navega a la página de creación de cupón
   void _navigateToCreateCoupon(BuildContext context, PromotionModel promotion) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -36,7 +32,6 @@ class PromotionsPage extends StatelessWidget {
     );
   }
 
-  // Muestra las opciones de agregar promoción
   void _showAddPromotionOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -65,8 +60,8 @@ class PromotionsPage extends StatelessWidget {
                   ),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.add_circle_outline),
-                  title: const Text('Agregar Nueva Promoción'),
+                  leading: const Icon(Icons.add_circle_outline, color: Colors.green),
+                  title: const Text('Agregar Nueva Promoción', style: TextStyle(fontWeight: FontWeight.bold)),
                   onTap: () {
                     Navigator.of(context).pop();
                     _navigateToCreatePromotion(context);
@@ -80,37 +75,61 @@ class PromotionsPage extends StatelessWidget {
     );
   }
 
-  // Construye el widget
   @override
   Widget build(BuildContext context) {
     final promotionController = Provider.of<PromotionController>(context);
 
-    return RefreshIndicator(
-      onRefresh: () => promotionController.fetchPromotions(),
-      child: Stack(
-        children: [
-          _buildPromotionsList(context, promotionController),
-          Positioned(
-            bottom: 16,
-            right: 16,
-            child: FloatingActionButton(
-              onPressed: () => _showAddPromotionOptions(context),
-              tooltip: 'Crear Promoción',
-              child: const Icon(Icons.add),
-            ),
-          ),
-        ],
+    return Scaffold(
+      body: RefreshIndicator(
+        color: Colors.green,
+        onRefresh: () => promotionController.fetchPromotions(),
+        child: _buildPromotionsList(context, promotionController),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddPromotionOptions(context),
+        backgroundColor: Colors.green[700],
+        tooltip: 'Crear Promoción',
+        child: const Icon(Icons.add),
       ),
     );
   }
 
-  // Construye la lista de promociones
   Widget _buildPromotionsList(BuildContext context, PromotionController controller) {
     if (controller.isLoading && controller.promotions.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // Si no hay promociones, muestra un mensaje amigable
+    // Mensaje de error o permiso denegado
+    if (controller.errorMessage != null) {
+      return Center(
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 80, color: Colors.red),
+                const SizedBox(height: 16),
+                const Text(
+                  'Algo salió mal',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  controller.errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Mensaje cuando no hay promociones
     if (controller.promotions.isEmpty) {
       return const Center(
         child: SingleChildScrollView(
@@ -120,18 +139,18 @@ class PromotionsPage extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.discount_outlined, size: 60, color: Colors.grey),
+                Icon(Icons.discount_outlined, size: 80, color: Colors.green),
                 SizedBox(height: 16),
                 Text(
-                  'Aún no tienes promociones creadas.',
+                  'Aún no tienes promociones',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green),
                 ),
                 SizedBox(height: 8),
                 Text(
                   'Pulsa el botón "+" para crear tu primera promoción y empezar a generar cupones.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: Colors.grey),
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
                 ),
               ],
             ),
@@ -140,55 +159,63 @@ class PromotionsPage extends StatelessWidget {
       );
     }
 
-    // Si hay un mensaje de error, muestra el mensaje
-    if (controller.errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Text(
-            'Error al cargar promociones: ${controller.errorMessage}',
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.red, fontSize: 16),
-          ),
-        ),
-      );
-    }
-
-    // Si hay promociones, muestra la lista
+    // Lista de promociones
     return ListView.builder(
-      padding: const EdgeInsets.only(bottom: 80),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       itemCount: controller.promotions.length,
       itemBuilder: (context, index) {
         final promotion = controller.promotions[index];
+
+        Color statusColor;
+        switch (promotion.status) {
+          case PromotionStatus.active:
+            statusColor = Colors.green;
+            break;
+          case PromotionStatus.scheduled:
+            statusColor = Colors.blue;
+            break;
+          case PromotionStatus.expired:
+            statusColor = Colors.red;
+            break;
+          default:
+            statusColor = Colors.grey;
+        }
+
         return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          elevation: 3,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          margin: const EdgeInsets.symmetric(vertical: 6),
           child: ListTile(
+            contentPadding: const EdgeInsets.all(12),
             leading: CircleAvatar(
-              backgroundColor: promotion.status == PromotionStatus.active ? Colors.green[100] :
-              promotion.status == PromotionStatus.scheduled ? Colors.blue[100] :
-              promotion.status == PromotionStatus.expired ? Colors.red[100] :
-              Colors.grey[200],
+              backgroundColor: statusColor.withOpacity(0.2),
               child: Icon(
                 promotion.discountType == DiscountType.percentage ? Icons.percent : Icons.attach_money,
-                color: promotion.status == PromotionStatus.active ? Colors.green[700] :
-                promotion.status == PromotionStatus.scheduled ? Colors.blue[700] :
-                promotion.status == PromotionStatus.expired ? Colors.red[700] :
-                Colors.grey[700],
+                color: statusColor,
               ),
             ),
-            title: Text(promotion.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(
+              promotion.name,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const SizedBox(height: 4),
                 Text(promotion.description),
                 const SizedBox(height: 4),
                 Text(
                   'Tipo: ${promotion.discountType.displayName} - Valor: ${promotion.discountValue}${promotion.discountType == DiscountType.percentage ? '%' : ''}',
+                  style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
                 Text(
                   'Válida: ${promotion.startDate.toDate().toLocal().toString().split(' ')[0]} - ${promotion.endDate.toDate().toLocal().toString().split(' ')[0]}',
+                  style: const TextStyle(color: Colors.grey),
                 ),
-                Text('Estado: ${promotion.status.displayName}', style: TextStyle(fontWeight: FontWeight.w500, color: promotion.status == PromotionStatus.active ? Colors.green : Colors.orange)),
+                Text(
+                  'Estado: ${promotion.status.displayName}',
+                  style: TextStyle(fontWeight: FontWeight.w600, color: statusColor),
+                ),
               ],
             ),
             trailing: PopupMenuButton<String>(
@@ -198,42 +225,44 @@ class PromotionsPage extends StatelessWidget {
                 } else if (value == 'delete') {
                   _showDeleteConfirmDialog(context, controller, promotion);
                 } else if (value == 'create_coupon') {
-                  if (promotion.id == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Error: ID de promoción no disponible.'), backgroundColor: Colors.red),
-                    );
-                    return;
-                  }
+                  if (promotion.id == null) return;
                   _navigateToCreateCoupon(context, promotion);
                 }
               },
               itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
                 const PopupMenuItem<String>(
                   value: 'edit',
-                  child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Editar Promoción')),
+                  child: ListTile(
+                    leading: Icon(Icons.edit_outlined),
+                    title: Text('Editar Promoción'),
+                  ),
                 ),
                 const PopupMenuItem<String>(
                   value: 'create_coupon',
-                  child: ListTile(leading: Icon(Icons.add_card_outlined), title: Text('Crear Cupón')),
+                  child: ListTile(
+                    leading: Icon(Icons.add_card_outlined),
+                    title: Text('Crear Cupón'),
+                  ),
                 ),
                 const PopupMenuItem<String>(
                   value: 'delete',
-                  child: ListTile(leading: Icon(Icons.delete_outline, color: Colors.red), title: Text('Eliminar Promoción', style: TextStyle(color: Colors.red))),
+                  child: ListTile(
+                    leading: Icon(Icons.delete_outline, color: Colors.red),
+                    title: Text('Eliminar Promoción', style: TextStyle(color: Colors.red)),
+                  ),
                 ),
               ],
             ),
             isThreeLine: true,
-            onTap: () {
-              _navigateToEditPromotion(context, promotion);
-            },
+            onTap: () => _navigateToEditPromotion(context, promotion),
           ),
         );
       },
     );
   }
 
-  // Muestra un diálogo de confirmación para eliminar una promoción
-  Future<void> _showDeleteConfirmDialog(BuildContext context, PromotionController controller, PromotionModel promotion) async {
+  Future<void> _showDeleteConfirmDialog(
+      BuildContext context, PromotionController controller, PromotionModel promotion) async {
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -243,7 +272,7 @@ class PromotionsPage extends StatelessWidget {
           content: SingleChildScrollView(
             child: ListBody(
               children: <Widget>[
-                Text('¿Estás seguro de que quieres eliminar la promoción "${promotion.name}"?'),
+                Text('¿Seguro que deseas eliminar "${promotion.name}"?'),
                 const Text('Esta acción no se puede deshacer.'),
               ],
             ),
@@ -251,34 +280,24 @@ class PromotionsPage extends StatelessWidget {
           actions: <Widget>[
             TextButton(
               child: const Text('Cancelar'),
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-              },
+              onPressed: () => Navigator.of(dialogContext).pop(),
             ),
             TextButton(
               style: TextButton.styleFrom(foregroundColor: Colors.red),
               child: const Text('Eliminar'),
               onPressed: () async {
                 Navigator.of(dialogContext).pop();
-                if (promotion.id == null) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Error: ID de promoción no disponible para eliminar.'), backgroundColor: Colors.red),
-                    );
-                  }
-                  return;
-                }
+                if (promotion.id == null) return;
                 bool success = await controller.deletePromotion(promotion.id!);
                 if (!context.mounted) return;
-                if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Promoción "${promotion.name}" eliminada.'), backgroundColor: Colors.green),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error al eliminar: ${controller.errorMessage ?? "Error desconocido"}'), backgroundColor: Colors.red),
-                  );
-                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(success
+                        ? 'Promoción "${promotion.name}" eliminada.'
+                        : 'Error al eliminar: ${controller.errorMessage ?? "Error desconocido"}'),
+                    backgroundColor: success ? Colors.green : Colors.red,
+                  ),
+                );
               },
             ),
           ],

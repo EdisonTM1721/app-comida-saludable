@@ -239,9 +239,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         return 'Su pedido ha sido entregado exitosamente.';
       case OrderStatus.cancelled:
         return 'El pedido ha sido cancelado.';
-      default:
-        return 'Estado desconocido del pedido.';
-    }
+      }
   }
 
   // Metodo para obtener una cadena de texto que representa el estado del pedido
@@ -296,9 +294,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         return Colors.green.shade700;
       case OrderStatus.cancelled:
         return Colors.red.shade700;
-      default:
-        return Colors.grey.shade700;
-    }
+      }
   }
 
   // Metodo para construir una columna de estado en el rastreo

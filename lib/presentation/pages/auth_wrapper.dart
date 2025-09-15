@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:logging/logging.dart';
+import 'package:provider/provider.dart';
 import 'package:emprendedor/presentation/controllers/product_controller.dart';
 import 'package:emprendedor/presentation/controllers/order_controller.dart';
 import 'package:emprendedor/presentation/controllers/stats_controller.dart';
@@ -24,46 +24,32 @@ class AuthWrapper extends StatefulWidget {
 
 class _AuthWrapperState extends State<AuthWrapper> {
   @override
-  void initState() {
-    super.initState();
-    // Escucha los cambios de autenticación para actualizar los controladores
-    FirebaseAuth.instance.authStateChanges().listen((User? user) {
-      final String? userId = user?.uid;
-
-      // Solo si el widget está montado y el contexto es válido, actualiza los controladores
-      if (mounted) {
-        context.read<ProductController>().setUserId(userId);
-        context.read<OrderController>().setUserId(userId);
-        context.read<StatsController>().setUserId(userId);
-        context.read<PromotionController>().setUserId(userId);
-        context.read<ProfileController>().setUserId(userId);
-        context.read<SocialMediaController>().setUserId(userId);
-        context.read<PaymentMethodController>().setUserId(userId);
-      }
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.userChanges(),
+      stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
 
         final user = snapshot.data;
         if (user == null) {
           logger.info("Usuario no autenticado. Navegando a LoginPage.");
+          _clearControllers(context);
           return const LoginPage();
         }
 
-        // Si el usuario está autenticado, muestra el shell de la app.
+        logger.info("Usuario autenticado. ID: ${user.uid}");
+        _updateControllers(context, user.uid);
+
         return Consumer<ProfileController>(
           builder: (context, profileController, child) {
             if (profileController.isLoading) {
               return const Scaffold(
-                  body: Center(child: CircularProgressIndicator()));
+                body: Center(child: CircularProgressIndicator()),
+              );
             }
             return profileController.hasProfile
                 ? const MainAppShell()
@@ -72,5 +58,25 @@ class _AuthWrapperState extends State<AuthWrapper> {
         );
       },
     );
+  }
+
+  void _updateControllers(BuildContext context, String userId) {
+    Provider.of<ProductController>(context, listen: false).setUserId(userId);
+    Provider.of<OrderController>(context, listen: false).setUserId(userId);
+    Provider.of<StatsController>(context, listen: false).setUserId(userId);
+    Provider.of<PromotionController>(context, listen: false).setUserId(userId);
+    Provider.of<ProfileController>(context, listen: false).setUserId(userId);
+    Provider.of<SocialMediaController>(context, listen: false).setUserId(userId);
+    Provider.of<PaymentMethodController>(context, listen: false).setUserId(userId);
+  }
+
+  void _clearControllers(BuildContext context) {
+    Provider.of<ProductController>(context, listen: false).setUserId(null);
+    Provider.of<OrderController>(context, listen: false).setUserId(null);
+    Provider.of<StatsController>(context, listen: false).setUserId(null);
+    Provider.of<PromotionController>(context, listen: false).setUserId(null);
+    Provider.of<ProfileController>(context, listen: false).setUserId(null);
+    Provider.of<SocialMediaController>(context, listen: false).setUserId(null);
+    Provider.of<PaymentMethodController>(context, listen: false).setUserId(null);
   }
 }

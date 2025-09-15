@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:emprendedor/data/models/promotion_model.dart';
 import 'package:emprendedor/data/models/coupon_model.dart';
@@ -10,32 +11,21 @@ class PromotionController extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
 
-  String? _userId; // Ya no es late
+  String? _userId;
+  StreamSubscription<List<PromotionModel>>? _subscription;
 
-  // Agrega este "getter" para exponer el userId de forma segura
   String? get userId => _userId;
+  bool get hasUserId => _userId != null;
 
-  // ==========================
-  // Inicializar userId
-  // ==========================
-  // Cambia el tipo de parámetro a 'String?'
   Future<void> setUserId(String? userId) async {
     _userId = userId;
-    // Llama a fetchPromotions solo si el userId no es nulo
     if (_userId != null) {
       await fetchPromotions();
     }
   }
 
-  bool get hasUserId => _userId != null;
-
-  // ==========================
-  // Promociones
-  // ==========================
   Stream<List<PromotionModel>> get promotionsStream {
-    if (_userId == null) {
-      return const Stream.empty(); // Evita usar _userId antes de inicializar
-    }
+    if (_userId == null) return const Stream.empty();
     return _repository.getPromotions(_userId!);
   }
 
@@ -43,25 +33,34 @@ class PromotionController extends ChangeNotifier {
     if (_userId == null) return;
 
     isLoading = true;
+    errorMessage = null;
     notifyListeners();
 
-    try {
-      promotionsStream.listen((data) {
+    await _subscription?.cancel();
+
+    _subscription = promotionsStream.listen(
+          (data) {
         promotions = data;
         isLoading = false;
         notifyListeners();
-      }, onError: (e) {
+      },
+      onError: (e) {
         errorMessage = e.toString();
         isLoading = false;
         notifyListeners();
-      });
-    } catch (e) {
-      errorMessage = e.toString();
-      isLoading = false;
-      notifyListeners();
-    }
+      },
+    );
   }
 
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  // ==========================
+  // Promociones CRUD
+  // ==========================
   Future<bool> createOrUpdatePromotion(PromotionModel promotion) async {
     if (_userId == null) {
       errorMessage = "Usuario no autenticado.";
@@ -95,7 +94,7 @@ class PromotionController extends ChangeNotifier {
   }
 
   // ==========================
-  // Cupones
+  // Cupones CRUD
   // ==========================
   Stream<List<CouponModel>> getCoupons(String promotionId) {
     if (_userId == null) return const Stream.empty();
@@ -108,7 +107,8 @@ class PromotionController extends ChangeNotifier {
       return false;
     }
     try {
-      await _repository.createCoupon(coupon, _userId!);
+      final couponWithUser = coupon.copyWith(userId: _userId);
+      await _repository.createCoupon(couponWithUser, _userId!);
       return true;
     } catch (e) {
       errorMessage = e.toString();
@@ -122,7 +122,8 @@ class PromotionController extends ChangeNotifier {
       return false;
     }
     try {
-      await _repository.updateCoupon(coupon, _userId!);
+      final couponWithUser = coupon.copyWith(userId: _userId);
+      await _repository.updateCoupon(couponWithUser, _userId!);
       return true;
     } catch (e) {
       errorMessage = e.toString();

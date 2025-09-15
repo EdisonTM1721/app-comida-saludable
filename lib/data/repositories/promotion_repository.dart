@@ -11,7 +11,6 @@ class PromotionRepository {
   // ==========================
   // PROMOCIONES
   // ==========================
-
   Stream<List<PromotionModel>> getPromotions(String userId) {
     return _firestore
         .collection(AppConstants.promotionsCollection)
@@ -22,14 +21,16 @@ class PromotionRepository {
   }
 
   Future<void> createPromotion(PromotionModel promotion, String userId) async {
+    final promoWithUser = promotion.copyWith(userId: userId);
     await _firestore
         .collection(AppConstants.promotionsCollection)
-        .add(promotion.copyWith(userId: userId).toFirestore());
+        .add(promoWithUser.toFirestore());
     _logger.info('Promoción "${promotion.name}" creada.');
   }
 
   Future<void> updatePromotion(PromotionModel promotion, String userId) async {
-    final docRef = _firestore.collection(AppConstants.promotionsCollection).doc(promotion.id);
+    final docRef =
+    _firestore.collection(AppConstants.promotionsCollection).doc(promotion.id);
     final doc = await docRef.get();
 
     if (!doc.exists || doc.data()?['userId'] != userId) {
@@ -41,7 +42,8 @@ class PromotionRepository {
   }
 
   Future<void> deletePromotion(String promotionId, String userId) async {
-    final docRef = _firestore.collection(AppConstants.promotionsCollection).doc(promotionId);
+    final docRef =
+    _firestore.collection(AppConstants.promotionsCollection).doc(promotionId);
     final doc = await docRef.get();
 
     if (!doc.exists || doc.data()?['userId'] != userId) {
@@ -55,19 +57,17 @@ class PromotionRepository {
   // ==========================
   // CUPONES
   // ==========================
-
   Stream<List<CouponModel>> getCouponsForPromotion(String promotionId, String userId) {
-    return _firestore
-        .collection(AppConstants.promotionsCollection)
-        .doc(promotionId)
-        .snapshots()
-        .asyncExpand((promoSnapshot) {
+    final promoRef =
+    _firestore.collection(AppConstants.promotionsCollection).doc(promotionId);
+
+    return promoRef.snapshots().asyncExpand((promoSnapshot) {
       if (!promoSnapshot.exists || promoSnapshot.data()?['userId'] != userId) {
-        return Stream.error(Exception("No autorizado para ver los cupones de esta promoción."));
+        return Stream.error(
+            Exception("No autorizado para ver los cupones de esta promoción."));
       }
-      return _firestore
-          .collection(AppConstants.promotionsCollection)
-          .doc(promotionId)
+
+      return promoRef
           .collection(AppConstants.couponsSubcollection)
           .snapshots()
           .map((snapshot) =>
@@ -114,7 +114,8 @@ class PromotionRepository {
     _logger.info('Cupón "${coupon.code}" actualizado.');
   }
 
-  Future<void> deleteCoupon(String promotionId, String couponId, String userId) async {
+  Future<void> deleteCoupon(
+      String promotionId, String couponId, String userId) async {
     final promoDoc = await _firestore
         .collection(AppConstants.promotionsCollection)
         .doc(promotionId)

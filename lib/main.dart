@@ -15,10 +15,8 @@ import 'package:emprendedor/presentation/controllers/social_media_controller.dar
 import 'package:emprendedor/presentation/controllers/payment_method_controller.dart';
 import 'package:emprendedor/presentation/pages/auth_wrapper.dart';
 
-// Configuración de Firebase App Check
 final Logger logger = Logger('AppLogger');
 
-// Punto de entrada de la aplicación
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   _setupLogging();
@@ -27,33 +25,31 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // Activar Firebase App Check
   if (kDebugMode) {
     try {
       logger.info("Activando Firebase App Check en modo DEBUG...");
-      await FirebaseAppCheck.instance.activate(
-        androidProvider: AndroidProvider.debug,
-      );
-      logger.info("✅ App Check activado en modo DEBUG.");
+      await FirebaseAppCheck.instance.activate(androidProvider: AndroidProvider.debug);
+      logger.info("✅ App Check activado en DEBUG.");
     } catch (e, stackTrace) {
-      logger.severe("❌ Error activando App Check en DEBUG: $e", e, stackTrace);
+      logger.severe("❌ Error App Check DEBUG: $e", e, stackTrace);
     }
   } else {
     try {
-      logger.info("Activando Firebase App Check en modo PRODUCCIÓN...");
+      logger.info("Activando Firebase App Check en PRODUCCIÓN...");
       await FirebaseAppCheck.instance.activate(
         androidProvider: AndroidProvider.playIntegrity,
         appleProvider: AppleProvider.appAttest,
       );
-      logger.info("✅ App Check activado en modo PRODUCCIÓN.");
+      logger.info("✅ App Check activado en PRODUCCIÓN.");
     } catch (e, stackTrace) {
-      logger.severe("❌ Error activando App Check en PRODUCCIÓN: $e", e, stackTrace);
+      logger.severe("❌ Error App Check PRODUCCIÓN: $e", e, stackTrace);
     }
   }
 
   runApp(const MyApp());
 }
 
-// Configuración del registro de depuración
 void _setupLogging() {
   Logger.root.level = Level.ALL;
   Logger.root.onRecord.listen((record) {
@@ -63,7 +59,6 @@ void _setupLogging() {
   });
 }
 
-// Configuración de la aplicación
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -71,13 +66,13 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ProductController()),
-        ChangeNotifierProvider(create: (_) => OrderController()),
-        ChangeNotifierProvider(create: (_) => StatsController()),
-        ChangeNotifierProvider(create: (_) => PromotionController()),
-        ChangeNotifierProvider(create: (_) => ProfileController()),
-        ChangeNotifierProvider(create: (_) => SocialMediaController()),
-        ChangeNotifierProvider(create: (_) => PaymentMethodController()),
+        ChangeNotifierProvider<ProductController>(create: (_) => ProductController()),
+        ChangeNotifierProvider<OrderController>(create: (_) => OrderController()),
+        ChangeNotifierProvider<StatsController>(create: (_) => StatsController()),
+        ChangeNotifierProvider<PromotionController>(create: (_) => PromotionController()),
+        ChangeNotifierProvider<ProfileController>(create: (_) => ProfileController()),
+        ChangeNotifierProvider<SocialMediaController>(create: (_) => SocialMediaController()),
+        ChangeNotifierProvider<PaymentMethodController>(create: (_) => PaymentMethodController()),
       ],
       child: MaterialApp(
         title: 'App Emprendedor',
