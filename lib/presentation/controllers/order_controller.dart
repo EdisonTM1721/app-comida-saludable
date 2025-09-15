@@ -32,14 +32,19 @@ class OrderController extends ChangeNotifier {
   OrderController();
 
   // Métodos públicos
-  Future<void> setUserId(String userId) async {
+  Future<void> setUserId(String? userId) async { // Cambiado de String a String?
     if (_userId == userId) {
       return;
     }
     _userId = userId;
 
-    // Cancelar la suscripción anterior si existe
-    await _ordersSubscription?.cancel();
+    if (_userId != null) {
+      // Si hay un userId válido, inicia la carga de pedidos
+      await fetchOrders();
+    } else {
+      // Si el userId es nulo (cierre de sesión), limpia los datos
+      disposeController();
+    }
   }
 
   // Métodos privados
@@ -101,7 +106,6 @@ class OrderController extends ChangeNotifier {
       return;
     }
 
-    // Cancelar la suscripción anterior si existe
     _setLoading(true);
     _clearError();
     try {
@@ -122,7 +126,6 @@ class OrderController extends ChangeNotifier {
       return false;
     }
 
-    // Cancelar la suscripción anterior si existe
     _clearError();
     try {
       await _orderRepository.updateOrderStatus(orderId, newStatus, _userId!);

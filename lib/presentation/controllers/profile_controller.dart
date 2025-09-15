@@ -31,13 +31,23 @@ class ProfileController extends ChangeNotifier {
   ProfileController();
 
   // Métodos públicos
-  Future<void> setUserId(String userId) async {
+  Future<void> setUserId(String? userId) async { // CHANGED to String?
     if (_userId == userId) {
       return;
     }
     _userId = userId;
-    logger.info('ProfileController inicializado para el usuario: $_userId.');
-    await fetchBusinessProfile();
+
+    if (_userId != null) {
+      logger.info('ProfileController inicializado para el usuario: $_userId.');
+      await fetchBusinessProfile();
+    } else {
+      // If the userId is null, reset the profile data
+      _businessProfile = null;
+      _isLoading = false;
+      _errorMessage = null;
+      logger.info('ProfileController reseteado debido a la desconexión del usuario.');
+      notifyListeners();
+    }
   }
 
   // Métodos privados
@@ -52,6 +62,8 @@ class ProfileController extends ChangeNotifier {
         _errorMessage = "Usuario no autenticado.";
         _businessProfile = null;
         logger.warning('fetchBusinessProfile: No hay usuario autenticado. Perfil establecido a null.');
+        _isLoading = false; // Moved here to ensure state is updated
+        notifyListeners(); // Moved here to ensure state is updated
         return;
       }
 

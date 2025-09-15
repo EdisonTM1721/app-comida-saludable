@@ -1,139 +1,145 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:emprendedor/data/models/promotion_model.dart';
 import 'package:emprendedor/data/models/coupon_model.dart';
 import 'package:emprendedor/data/repositories/promotion_repository.dart';
-import 'package:logging/logging.dart';
 
-// El controlador ahora acepta el userId en su constructor
 class PromotionController extends ChangeNotifier {
-  String? _userId;
-  final PromotionRepository _promotionRepository = PromotionRepository();
-  final Logger _logger = Logger('PromotionController');
+  final PromotionRepository _repository = PromotionRepository();
 
-  // Lista de promociones
-  List<PromotionModel> _promotions = [];
-  List<PromotionModel> get promotions => _promotions;
+  List<PromotionModel> promotions = [];
+  bool isLoading = false;
+  String? errorMessage;
 
-  bool _isLoading = false;
-  bool get isLoading => _isLoading;
+  String? _userId; // Ya no es late
 
-  String? _errorMessage;
-  String? get errorMessage => _errorMessage;
+  // Agrega este "getter" para exponer el userId de forma segura
+  String? get userId => _userId;
 
-  // Constructor vacío
-  PromotionController();
-
-  // Nuevo método para inicializar el controlador con el userId
-  Future<void> setUserId(String userId) async {
-    if (_userId == userId) {
-      return; // Evita recargar si el usuario es el mismo
-    }
+  // ==========================
+  // Inicializar userId
+  // ==========================
+  // Cambia el tipo de parámetro a 'String?'
+  Future<void> setUserId(String? userId) async {
     _userId = userId;
-    await fetchPromotions();
+    // Llama a fetchPromotions solo si el userId no es nulo
+    if (_userId != null) {
+      await fetchPromotions();
+    }
   }
 
-  // Método para obtener las promociones del usuario desde Firestore
-  Future<void> fetchPromotions() async {
-    // AÑADIDO: Verificación de seguridad
-    if (_userId == null) {
-      _promotions = [];
-      _isLoading = false;
-      notifyListeners();
-      return;
-    }
+  bool get hasUserId => _userId != null;
 
-    _isLoading = true;
-    _errorMessage = null;
+  // ==========================
+  // Promociones
+  // ==========================
+  Stream<List<PromotionModel>> get promotionsStream {
+    if (_userId == null) {
+      return const Stream.empty(); // Evita usar _userId antes de inicializar
+    }
+    return _repository.getPromotions(_userId!);
+  }
+
+  Future<void> fetchPromotions() async {
+    if (_userId == null) return;
+
+    isLoading = true;
     notifyListeners();
 
     try {
-      _promotionRepository.getPromotions(_userId!).listen((promos) {
-        _promotions = promos;
-        _isLoading = false;
+      promotionsStream.listen((data) {
+        promotions = data;
+        isLoading = false;
         notifyListeners();
-      }, onError: (error, stackTrace) {
-        _logger.severe('Error al obtener el stream de promociones', error, stackTrace);
-        _errorMessage = 'Error de Firebase: $error';
-        _isLoading = false;
+      }, onError: (e) {
+        errorMessage = e.toString();
+        isLoading = false;
         notifyListeners();
       });
-    } on FirebaseException catch (e) {
-      _errorMessage = 'Error de Firebase: ${e.message}';
-      _promotions = [];
-      _isLoading = false;
-      notifyListeners();
     } catch (e) {
-      _errorMessage = 'Error inesperado: $e';
-      _promotions = [];
-      _isLoading = false;
+      errorMessage = e.toString();
+      isLoading = false;
       notifyListeners();
     }
   }
 
-  // Método para crear o actualizar una promoción
   Future<bool> createOrUpdatePromotion(PromotionModel promotion) async {
     if (_userId == null) {
-      _errorMessage = "Usuario no autenticado, no se puede guardar la promoción.";
-      notifyListeners();
+      errorMessage = "Usuario no autenticado.";
       return false;
     }
     try {
       if (promotion.id == null) {
-        await _promotionRepository.createPromotion(promotion, _userId!);
+        await _repository.createPromotion(promotion, _userId!);
       } else {
-        await _promotionRepository.updatePromotion(promotion, _userId!);
+        await _repository.updatePromotion(promotion, _userId!);
       }
       return true;
-    } on FirebaseException catch (e) {
-      _errorMessage = 'Error de Firebase: ${e.message}';
-      notifyListeners();
-      return false;
     } catch (e) {
-      _errorMessage = 'Error inesperado: $e';
-      notifyListeners();
+      errorMessage = e.toString();
       return false;
     }
   }
 
-  // Nuevo método para crear un cupón para una promoción
-  Future<bool> createCoupon(CouponModel coupon) async {
-    if (_userId == null) {
-      _errorMessage = "Usuario no autenticado, no se puede crear el cupón.";
-      notifyListeners();
-      return false;
-    }
-    try {
-      await _promotionRepository.createCoupon(coupon, _userId!);
-      return true;
-    } on FirebaseException catch (e) {
-      _errorMessage = 'Error de Firebase: ${e.message}';
-      notifyListeners();
-      return false;
-    } catch (e) {
-      _errorMessage = 'Error inesperado: $e';
-      notifyListeners();
-      return false;
-    }
-  }
-
-  // Método para eliminar una promoción
   Future<bool> deletePromotion(String promotionId) async {
     if (_userId == null) {
-      _errorMessage = "Usuario no autenticado, no se puede eliminar la promoción.";
-      notifyListeners();
+      errorMessage = "Usuario no autenticado.";
       return false;
     }
     try {
-      await _promotionRepository.deletePromotion(promotionId, _userId!);
+      await _repository.deletePromotion(promotionId, _userId!);
       return true;
-    } on FirebaseException catch (e) {
-      _errorMessage = 'Error de Firebase: ${e.message}';
-      notifyListeners();
-      return false;
     } catch (e) {
-      _errorMessage = 'Error inesperado: $e';
-      notifyListeners();
+      errorMessage = e.toString();
+      return false;
+    }
+  }
+
+  // ==========================
+  // Cupones
+  // ==========================
+  Stream<List<CouponModel>> getCoupons(String promotionId) {
+    if (_userId == null) return const Stream.empty();
+    return _repository.getCouponsForPromotion(promotionId, _userId!);
+  }
+
+  Future<bool> createCoupon(CouponModel coupon) async {
+    if (_userId == null) {
+      errorMessage = "Usuario no autenticado.";
+      return false;
+    }
+    try {
+      await _repository.createCoupon(coupon, _userId!);
+      return true;
+    } catch (e) {
+      errorMessage = e.toString();
+      return false;
+    }
+  }
+
+  Future<bool> updateCoupon(CouponModel coupon) async {
+    if (_userId == null) {
+      errorMessage = "Usuario no autenticado.";
+      return false;
+    }
+    try {
+      await _repository.updateCoupon(coupon, _userId!);
+      return true;
+    } catch (e) {
+      errorMessage = e.toString();
+      return false;
+    }
+  }
+
+  Future<bool> deleteCoupon(String promotionId, String couponId) async {
+    if (_userId == null) {
+      errorMessage = "Usuario no autenticado.";
+      return false;
+    }
+    try {
+      await _repository.deleteCoupon(promotionId, couponId, _userId!);
+      return true;
+    } catch (e) {
+      errorMessage = e.toString();
       return false;
     }
   }

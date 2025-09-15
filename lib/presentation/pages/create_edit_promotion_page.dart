@@ -4,18 +4,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:emprendedor/data/models/promotion_model.dart';
 import 'package:emprendedor/presentation/controllers/promotion_controller.dart';
 
-// Nueva página para crear o editar una promoción
 class CreateEditPromotionPage extends StatefulWidget {
   final PromotionModel? promotionToEdit;
 
-  // Constructor de la nueva página
   const CreateEditPromotionPage({super.key, this.promotionToEdit});
 
-  // Metodo para crear una nueva instancia de la página
   @override
   CreateEditPromotionPageState createState() => CreateEditPromotionPageState();
 }
-// Estado de la nueva página
+
 class CreateEditPromotionPageState extends State<CreateEditPromotionPage> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
@@ -28,19 +25,22 @@ class CreateEditPromotionPageState extends State<CreateEditPromotionPage> {
 
   bool get isEditing => widget.promotionToEdit != null;
 
-  // Inicialización de controladores
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.promotionToEdit?.name ?? '');
-    _descriptionController = TextEditingController(text: widget.promotionToEdit?.description ?? '');
-    _discountValueController = TextEditingController(text: widget.promotionToEdit?.discountValue.toString() ?? '');
-    _discountType = widget.promotionToEdit?.discountType ?? DiscountType.percentage;
+    _nameController =
+        TextEditingController(text: widget.promotionToEdit?.name ?? '');
+    _descriptionController =
+        TextEditingController(text: widget.promotionToEdit?.description ?? '');
+    _discountValueController = TextEditingController(
+        text: widget.promotionToEdit?.discountValue.toString() ?? '');
+    _discountType =
+        widget.promotionToEdit?.discountType ?? DiscountType.percentage;
     _startDate = widget.promotionToEdit?.startDate.toDate() ?? DateTime.now();
-    _endDate = widget.promotionToEdit?.endDate.toDate() ?? DateTime.now().add(const Duration(days: 30));
+    _endDate = widget.promotionToEdit?.endDate.toDate() ??
+        DateTime.now().add(const Duration(days: 30));
   }
 
-  // Limpieza de controladores
   @override
   void dispose() {
     _nameController.dispose();
@@ -51,16 +51,12 @@ class CreateEditPromotionPageState extends State<CreateEditPromotionPage> {
 
   Future<void> _selectDate(BuildContext context, {required bool isStart}) async {
     final initialDate = isStart ? _startDate : _endDate;
-    final firstDate = DateTime.now();
-    final lastDate = DateTime(2030);
-
     final picked = await showDatePicker(
       context: context,
       initialDate: initialDate,
-      firstDate: firstDate,
-      lastDate: lastDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2030),
     );
-
     if (!mounted || picked == null) return;
 
     setState(() {
@@ -78,24 +74,31 @@ class CreateEditPromotionPageState extends State<CreateEditPromotionPage> {
     });
   }
 
-  // Envía el formulario
   Future<void> _submitForm() async {
-    if (_isSubmitting) return;
+    final controller =
+    Provider.of<PromotionController>(context, listen: false);
 
-    if (!(_formKey.currentState?.validate() ?? false)) {
-      if (!mounted) return;
+    if (!controller.hasUserId) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor, completa todos los campos requeridos.')),
+        const SnackBar(
+          content: Text('Usuario no autenticado.'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
 
-    if (!mounted) return;
-    setState(() { _isSubmitting = true; });
+    if (_isSubmitting) return;
 
-    final controller = Provider.of<PromotionController>(context, listen: false);
-    bool success = false;
-    String? errorMessage;
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Por favor, completa todos los campos requeridos.')),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
 
     try {
       final promotion = PromotionModel(
@@ -106,45 +109,48 @@ class CreateEditPromotionPageState extends State<CreateEditPromotionPage> {
         discountValue: double.tryParse(_discountValueController.text) ?? 0.0,
         startDate: Timestamp.fromDate(_startDate),
         endDate: Timestamp.fromDate(_endDate),
-        status: PromotionStatus.active, userId: '',
+        status: PromotionStatus.active,
+        userId: controller.userId!,
       );
 
-      // Ahora llamamos al método unificado 'createOrUpdatePromotion'
-      success = await controller.createOrUpdatePromotion(promotion);
-      errorMessage = controller.errorMessage;
+      final success = await controller.createOrUpdatePromotion(promotion);
 
-    } catch (e) {
-      errorMessage = 'Ocurrió un error inesperado: $e';
-    } finally {
-      if (mounted) {
-        setState(() { _isSubmitting = false; });
-        if (success) {
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Promoción ${isEditing ? "actualizada" : "creada"} con éxito!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: ${errorMessage ?? "Ocurrió un error."}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+      if (!mounted) return;
+
+      if (success) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Promoción ${isEditing ? "actualizada" : "creada"} con éxito!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(controller.errorMessage ?? 'Error al guardar promoción.'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error inesperado: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
-  // Construye el widget
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(isEditing ? 'Editar Promoción' : 'Crear Promoción'),
-      ),
+      appBar: AppBar(title: Text(isEditing ? 'Editar Promoción' : 'Crear Promoción')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -173,12 +179,8 @@ class CreateEditPromotionPageState extends State<CreateEditPromotionPage> {
                 validator: (value) {
                   if (value == null || value.isEmpty) return 'Ingresa un valor.';
                   final parsedValue = double.tryParse(value);
-                  if (parsedValue == null || parsedValue < 0) {
-                    return 'Ingresa un número válido y positivo.';
-                  }
-                  if (_discountType == DiscountType.percentage && (parsedValue > 100)) {
-                    return 'El porcentaje no puede ser mayor a 100.';
-                  }
+                  if (parsedValue == null || parsedValue < 0) return 'Ingresa un número válido y positivo.';
+                  if (_discountType == DiscountType.percentage && parsedValue > 100) return 'El porcentaje no puede ser mayor a 100.';
                   return null;
                 },
               ),

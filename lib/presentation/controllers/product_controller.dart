@@ -60,10 +60,19 @@ class ProductController extends ChangeNotifier {
   }
 
   // Métodos privados
-  Future<void> setUserId(String userId) async {
+  // CORRECCIÓN: Aceptar un String? para manejar el caso de logout
+  Future<void> setUserId(String? userId) async {
     if (_userId == userId) return;
     _userId = userId;
-    await fetchProducts();
+    if (_userId != null) {
+      await fetchProducts();
+    } else {
+      // Limpia los productos y cancela la suscripción cuando no hay usuario
+      _products = [];
+      _productsSubscription?.cancel();
+      _setLoading(false);
+      notifyListeners();
+    }
   }
 
   // Método de gestión de ciclo de vida
@@ -77,10 +86,11 @@ class ProductController extends ChangeNotifier {
   Future<void> fetchProducts({String? category}) async {
     if (_userId == null) {
       _setError("Usuario no autenticado. No se pueden cargar productos.");
+      _products = []; // Limpia la lista de productos
+      _setLoading(false);
       return;
     }
 
-    // Cancelar la suscripción anterior si existe
     _setLoading(true);
     _clearError();
     final categoryToFetch = category ?? _selectedCategory;

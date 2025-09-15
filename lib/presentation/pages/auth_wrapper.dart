@@ -15,36 +15,34 @@ import 'package:emprendedor/presentation/pages/main_app_shell.dart';
 
 final Logger logger = Logger('AuthWrapperLogger');
 
-// Clase para controlar el estado de autenticación
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
-  // Construye el widget
   @override
   State<AuthWrapper> createState() => _AuthWrapperState();
 }
 
-// Estado del widget
 class _AuthWrapperState extends State<AuthWrapper> {
-  final Map<Type, ChangeNotifier> _controllers = {};
-  String? _currentUserId;
-
-  // Método para limpiar los controladores
   @override
-  void dispose() {
-    _disposeControllers();
-    super.dispose();
+  void initState() {
+    super.initState();
+    // Escucha los cambios de autenticación para actualizar los controladores
+    FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      final String? userId = user?.uid;
+
+      // Solo si el widget está montado y el contexto es válido, actualiza los controladores
+      if (mounted) {
+        context.read<ProductController>().setUserId(userId);
+        context.read<OrderController>().setUserId(userId);
+        context.read<StatsController>().setUserId(userId);
+        context.read<PromotionController>().setUserId(userId);
+        context.read<ProfileController>().setUserId(userId);
+        context.read<SocialMediaController>().setUserId(userId);
+        context.read<PaymentMethodController>().setUserId(userId);
+      }
+    });
   }
 
-  // Método para limpiar los controladores
-  void _disposeControllers() {
-    for (var controller in _controllers.values) {
-      controller.dispose();
-    }
-    _controllers.clear();
-  }
-
-  // Construye el widget
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
@@ -54,80 +52,22 @@ class _AuthWrapperState extends State<AuthWrapper> {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
 
-        if (!snapshot.hasData) {
-          _disposeControllers();
-          _currentUserId = null;
+        final user = snapshot.data;
+        if (user == null) {
           logger.info("Usuario no autenticado. Navegando a LoginPage.");
           return const LoginPage();
         }
 
-        // Obtener el ID del usuario autenticado
-        final user = snapshot.data!;
-        final userId = user.uid;
-
-        if (_currentUserId != userId) {
-          _disposeControllers();
-          _currentUserId = userId;
-
-          _controllers[ProductController] = ProductController();
-          _controllers[OrderController] = OrderController();
-          _controllers[StatsController] = StatsController();
-          _controllers[PromotionController] = PromotionController();
-          _controllers[ProfileController] = ProfileController();
-          _controllers[SocialMediaController] = SocialMediaController();
-          _controllers[PaymentMethodController] = PaymentMethodController();
-        }
-
-        // Cargar los datos del usuario
-        return FutureBuilder<void>(
-          future: Future.wait<void>([
-            (_controllers[ProductController] as ProductController).setUserId(userId),
-            (_controllers[OrderController] as OrderController).setUserId(userId),
-            (_controllers[StatsController] as StatsController).setUserId(userId),
-            (_controllers[PromotionController] as PromotionController).setUserId(userId),
-            (_controllers[ProfileController] as ProfileController).setUserId(userId),
-            (_controllers[SocialMediaController] as SocialMediaController).setUserId(userId),
-            (_controllers[PaymentMethodController] as PaymentMethodController).setUserId(userId),
-          ]),
-          builder: (context, futureSnapshot) {
-            if (futureSnapshot.connectionState == ConnectionState.waiting) {
-              return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        // Si el usuario está autenticado, muestra el shell de la app.
+        return Consumer<ProfileController>(
+          builder: (context, profileController, child) {
+            if (profileController.isLoading) {
+              return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()));
             }
-            if (futureSnapshot.hasError) {
-              logger.severe("Error al inicializar los datos: ${futureSnapshot.error}");
-              return const Center(child: Text('Error al inicializar los datos del usuario.'));
-            }
-
-            // Navegar a la página principal
-            return MultiProvider(
-              providers: [
-                ChangeNotifierProvider.value(
-                    value: _controllers[ProductController] as ProductController),
-                ChangeNotifierProvider.value(
-                    value: _controllers[OrderController] as OrderController),
-                ChangeNotifierProvider.value(
-                    value: _controllers[StatsController] as StatsController),
-                ChangeNotifierProvider.value(
-                    value: _controllers[PromotionController] as PromotionController),
-                ChangeNotifierProvider.value(
-                    value: _controllers[ProfileController] as ProfileController),
-                ChangeNotifierProvider.value(
-                    value: _controllers[SocialMediaController] as SocialMediaController),
-                ChangeNotifierProvider.value(
-                    value: _controllers[PaymentMethodController] as PaymentMethodController),
-              ],
-              child: Consumer<ProfileController>(
-                builder: (context, profileController, child) {
-                  if (profileController.isLoading) {
-                    return const Scaffold(
-                        body: Center(child: CircularProgressIndicator()));
-                  }
-                  return profileController.hasProfile
-                      ? const MainAppShell()
-                      : const BusinessProfileEditPage();
-                },
-              ),
-            );
+            return profileController.hasProfile
+                ? const MainAppShell()
+                : const BusinessProfileEditPage();
           },
         );
       },
