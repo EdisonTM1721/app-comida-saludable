@@ -1,3 +1,5 @@
+// Archivo: login_page.dart
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,19 +9,15 @@ import 'package:emprendedor/presentation/pages/register_page.dart';
 import 'package:emprendedor/presentation/pages/phone_auth_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-// Configuración de logging
 final Logger logger = Logger('LoginPage');
 
-// Nueva página de inicio de sesión
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
-  // Construir la página
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
 
-// Estado de la página de inicio de sesión
 class _LoginPageState extends State<LoginPage> {
   final _auth = FirebaseAuth.instance;
   final _emailController = TextEditingController();
@@ -39,13 +37,14 @@ class _LoginPageState extends State<LoginPage> {
     final Uri url = Uri.parse(urlString);
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar( // Usar context directamente aquí es generalmente seguro si _launchURL se llama desde build o callbacks de UI
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('No se pudo abrir el enlace: $urlString'), backgroundColor: Colors.red),
         );
       }
     }
   }
 
+  // Método de inicio de sesión con correo y contraseña - CORREGIDO
   Future<void> _signInWithEmail() async {
     if (!mounted) return;
     if (_formKey.currentState?.validate() ?? false) {
@@ -58,7 +57,7 @@ class _LoginPageState extends State<LoginPage> {
           email: _emailController.text.trim(),
           password: _passwordController.text,
         );
-        // La navegación la maneja el listener de authStateChanges, no se requiere push aquí.
+        logger.info('Inicio de sesión con correo exitoso. El AuthWrapper manejará la navegación.');
       } on FirebaseAuthException catch (e) {
         if (!mounted) return;
         String message;
@@ -86,6 +85,7 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  // Método de inicio de sesión con Google - CORREGIDO
   Future<void> _signInWithGoogle() async {
     if (!mounted) return;
     setState(() {
@@ -93,7 +93,10 @@ class _LoginPageState extends State<LoginPage> {
       _isLoading = true;
     });
     try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      await googleSignIn.signOut();
+
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       if (googleUser == null) {
         if (!mounted) return;
         return;
@@ -104,7 +107,7 @@ class _LoginPageState extends State<LoginPage> {
         idToken: googleAuth.idToken,
       );
       await _auth.signInWithCredential(credential);
-      // La navegación la maneja el listener de authStateChanges
+      logger.info('Inicio de sesión con Google exitoso. El AuthWrapper manejará la navegación.');
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       String message;
@@ -170,8 +173,9 @@ class _LoginPageState extends State<LoginPage> {
       );
       logger.severe('Error al enviar correo de restablecimiento: ${e.code} - ${e.message}');
     } finally {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -316,7 +320,6 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      // LÓGICA DE NAVEGACIÓN CORREGIDA AQUÍ
                       ElevatedButton.icon(
                         onPressed: _isLoading ? null : () async {
                           if (mounted) {

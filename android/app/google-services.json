@@ -30,56 +30,6 @@
       "api_key": [
         {
           "current_key": "AIzaSyDY4k8MHDDWZbl3HEyhDCnGh57g3PdAil4"
-        },
-        {
-          "current_key": "AIzaSyCtrraHknTFTgOMKevOz8KCGc83RBQ6RYs"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "373215790658-c2q3dv0nj7cal1hnm67glkm63vgsdjfe.apps.googleusercontent.com",
-              "client_type": 3
-            },
-            {
-              "client_id": "373215790658-7pu3usn1t2i3c8k0fb7t4620fg4kt7a6.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.example.emprendedor"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:373215790658:android:c4908a4c655a25a5180fdb",
-        "android_client_info": {
-          "package_name": "com.example.emprendedor"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "373215790658-maomihn2vcgeec15qkpmvnoap5u282o5.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.example.emprendedor",
-            "certificate_hash": "bed7bd1625488fdc2f5d4bf0e6abea4491b10603"
-          }
-        },
-        {
-          "client_id": "373215790658-c2q3dv0nj7cal1hnm67glkm63vgsdjfe.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyDY4k8MHDDWZbl3HEyhDCnGh57g3PdAil4"
-        },
-        {
-          "current_key": "AIzaSyCtrraHknTFTgOMKevOz8KCGc83RBQ6RYs"
         }
       ],
       "services": {

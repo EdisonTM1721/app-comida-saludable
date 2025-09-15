@@ -65,8 +65,6 @@ class PromotionRepository {
     try {
       final doc = await _firestore.collection(AppConstants.promotionsCollection).doc(promotionId).get();
       if (doc.exists && doc.data()?['userId'] == userId) {
-        // También puedes considerar eliminar los subdocumentos de cupones aquí.
-        // await _deleteCouponsForPromotion(promotionId);
         await _firestore
             .collection(AppConstants.promotionsCollection)
             .doc(promotionId)
@@ -82,19 +80,26 @@ class PromotionRepository {
     }
   }
 
-  // Obtener todos los cupones para una promoción específica
+  // --- CORRECCIÓN CRÍTICA ---
+  // Ahora el método verifica la propiedad del usuario antes de devolver el stream de cupones.
   Stream<List<CouponModel>> getCouponsForPromotion(String promotionId, String userId) {
     try {
-      // Verifica la autorización antes de devolver el stream
       return _firestore
           .collection(AppConstants.promotionsCollection)
           .doc(promotionId)
-          .collection(AppConstants.couponsSubcollection)
           .snapshots()
-          .map((snapshot) {
-        return snapshot.docs
-            .map((doc) => CouponModel.fromFirestore(doc))
-            .toList();
+          .asyncExpand((promoSnapshot) {
+        if (!promoSnapshot.exists || promoSnapshot.data()?['userId'] != userId) {
+          _logger.warning("Acceso no autorizado a cupones de la promoción: $promotionId");
+          return Stream.error(Exception("No está autorizado para ver estos cupones."));
+        }
+        return _firestore
+            .collection(AppConstants.promotionsCollection)
+            .doc(promotionId)
+            .collection(AppConstants.couponsSubcollection)
+            .snapshots()
+            .map((couponSnapshot) =>
+            couponSnapshot.docs.map((doc) => CouponModel.fromFirestore(doc)).toList());
       });
     } catch (e, stackTrace) {
       _logger.severe('Error getting coupons for promotion $promotionId', e, stackTrace);
@@ -105,7 +110,6 @@ class PromotionRepository {
   // Crear un nuevo cupón
   Future<void> createCoupon(CouponModel coupon, String userId) async {
     try {
-      // Verificar si el usuario está autorizado para agregar cupones a esta promoción
       final promoDoc = await _firestore.collection(AppConstants.promotionsCollection).doc(coupon.promotionId).get();
       if (!promoDoc.exists || promoDoc.data()?['userId'] != userId) {
         _logger.warning("Intento de crear un cupón en una promoción no autorizada: ${coupon.promotionId} por el usuario $userId");
@@ -126,7 +130,6 @@ class PromotionRepository {
   // Actualizar un cupón
   Future<void> updateCoupon(CouponModel coupon, String userId) async {
     try {
-      // Verifica si el usuario es el dueño de la promoción padre antes de actualizar el cupón
       final promoDoc = await _firestore.collection(AppConstants.promotionsCollection).doc(coupon.promotionId).get();
       if (!promoDoc.exists || promoDoc.data()?['userId'] != userId) {
         _logger.warning("Intento de actualizar un cupón en una promoción no autorizada: ${coupon.promotionId} por el usuario $userId");
@@ -148,7 +151,6 @@ class PromotionRepository {
   // Eliminar un cupón
   Future<void> deleteCoupon(String promotionId, String couponId, String userId) async {
     try {
-      // Verifica si el usuario es el dueño de la promoción padre antes de eliminar el cupón
       final promoDoc = await _firestore.collection(AppConstants.promotionsCollection).doc(promotionId).get();
       if (!promoDoc.exists || promoDoc.data()?['userId'] != userId) {
         _logger.warning("Intento de eliminar un cupón en una promoción no autorizada: $promotionId por el usuario $userId");

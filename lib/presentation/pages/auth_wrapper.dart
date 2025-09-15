@@ -7,175 +7,121 @@ import 'package:emprendedor/presentation/controllers/order_controller.dart';
 import 'package:emprendedor/presentation/controllers/stats_controller.dart';
 import 'package:emprendedor/presentation/controllers/promotion_controller.dart';
 import 'package:emprendedor/presentation/controllers/profile_controller.dart';
-import 'package:emprendedor/presentation/pages/home_page.dart';
-import 'package:emprendedor/presentation/pages/product_list_page.dart';
-import 'package:emprendedor/presentation/pages/order_list_page.dart';
-import 'package:emprendedor/presentation/pages/statistics_page.dart';
-import 'package:emprendedor/presentation/pages/promotions_page.dart';
+import 'package:emprendedor/presentation/controllers/social_media_controller.dart';
+import 'package:emprendedor/presentation/controllers/payment_method_controller.dart';
 import 'package:emprendedor/presentation/pages/login_page.dart';
 import 'package:emprendedor/presentation/pages/business_profile_edit_page.dart';
-import 'package:emprendedor/presentation/pages/business_profile_page.dart';
-import 'package:emprendedor/presentation/pages/settings_page.dart';
+import 'package:emprendedor/presentation/pages/main_app_shell.dart';
 
 final Logger logger = Logger('AuthWrapperLogger');
 
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  final Map<Type, ChangeNotifier> _controllers = {};
+  String? _currentUserId;
+
+  @override
+  void dispose() {
+    _disposeControllers();
+    super.dispose();
+  }
+
+  void _disposeControllers() {
+    for (var controller in _controllers.values) {
+      controller.dispose();
+    }
+    _controllers.clear();
+  }
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
+      stream: FirebaseAuth.instance.userChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
 
-        if (snapshot.hasData) {
-          final userId = snapshot.data!.uid;
-
-          return MultiProvider(
-            providers: [
-              ChangeNotifierProvider(create: (_) => ProductController(userId: userId)),
-              ChangeNotifierProvider(create: (_) => OrderController(userId: userId)),
-              ChangeNotifierProvider(create: (_) => StatsController(userId: userId)),
-              ChangeNotifierProvider(create: (_) => PromotionController(userId: userId)),
-              ChangeNotifierProvider(create: (_) => ProfileController(userId: userId)),
-            ],
-            child: Consumer<ProfileController>(
-              builder: (context, profileController, child) {
-                if (profileController.isLoading) {
-                  return const Scaffold(
-                    body: Center(child: CircularProgressIndicator()),
-                  );
-                }
-                if (profileController.hasProfile) {
-                  return const MainAppShell();
-                } else {
-                  return const BusinessProfileEditPage();
-                }
-              },
-            ),
-          );
-        } else {
+        if (!snapshot.hasData) {
+          _disposeControllers();
+          _currentUserId = null;
+          logger.info("Usuario no autenticado. Navegando a LoginPage.");
           return const LoginPage();
         }
-      },
-    );
-  }
-}
 
-class MainAppShell extends StatefulWidget {
-  const MainAppShell({super.key});
+        final user = snapshot.data!;
+        final userId = user.uid;
 
-  @override
-  State<MainAppShell> createState() => _MainAppShellState();
-}
+        if (_currentUserId != userId) {
+          _disposeControllers();
+          _currentUserId = userId;
 
-class _MainAppShellState extends State<MainAppShell> {
-  int _selectedIndex = 0;
-  final _auth = FirebaseAuth.instance;
+          _controllers[ProductController] = ProductController();
+          _controllers[OrderController] = OrderController();
+          _controllers[StatsController] = StatsController();
+          _controllers[PromotionController] = PromotionController();
+          _controllers[ProfileController] = ProfileController();
+          _controllers[SocialMediaController] = SocialMediaController();
+          _controllers[PaymentMethodController] = PaymentMethodController();
+        }
 
-  // Esta lista ahora es dinámica para que las páginas se construyan con el contexto correcto.
-  final List<Widget> _pages = <Widget>[
-    const HomePage(),
-    const ProductListPage(),
-    const OrderListPage(),
-    const StatisticsPage(),
-    const PromotionsPage(),
-    const BusinessProfilePage(),
-  ];
+        return FutureBuilder<void>(
+          future: Future.wait<void>([
+            (_controllers[ProductController] as ProductController).setUserId(userId),
+            (_controllers[OrderController] as OrderController).setUserId(userId),
+            (_controllers[StatsController] as StatsController).setUserId(userId),
+            (_controllers[PromotionController] as PromotionController).setUserId(userId),
+            (_controllers[ProfileController] as ProfileController).setUserId(userId),
+            (_controllers[SocialMediaController] as SocialMediaController).setUserId(userId),
+            (_controllers[PaymentMethodController] as PaymentMethodController).setUserId(userId),
+          ]),
+          builder: (context, futureSnapshot) {
+            if (futureSnapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(body: Center(child: CircularProgressIndicator()));
+            }
+            if (futureSnapshot.hasError) {
+              logger.severe("Error al inicializar los datos: ${futureSnapshot.error}");
+              return const Center(child: Text('Error al inicializar los datos del usuario.'));
+            }
 
-  static const List<String> _pageTitles = <String>[
-    'Panel de Inicio',
-    'Mis Productos',
-    'Mis Pedidos',
-    'Estadísticas de la Tienda',
-    'Mis Promociones',
-    'Mi Perfil',
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
-  void _logout() async {
-    try {
-      await _auth.signOut();
-    } catch (e, stackTrace) {
-      logger.severe("Error durante el logout: $e", e, stackTrace);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // La página se construye dinámicamente usando el índice seleccionado.
-    final currentPage = _pages[_selectedIndex];
-
-    // Lógica para los botones de acción en el AppBar...
-    List<Widget>? appBarActions;
-    if (_selectedIndex == 4) {
-      // Necesitas acceder al PromotionController aquí
-      final promotionController = Provider.of<PromotionController>(context, listen: false);
-      appBarActions = [
-        IconButton(
-          icon: const Icon(Icons.refresh),
-          onPressed: () {
-            promotionController.fetchPromotions();
-          },
-          tooltip: 'Refrescar Promociones',
-        ),
-      ];
-    } else if (_selectedIndex == 5) {
-      appBarActions = [
-        IconButton(
-          icon: const Icon(Icons.settings),
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => const SettingsPage(),
+            return MultiProvider(
+              providers: [
+                ChangeNotifierProvider.value(
+                    value: _controllers[ProductController] as ProductController),
+                ChangeNotifierProvider.value(
+                    value: _controllers[OrderController] as OrderController),
+                ChangeNotifierProvider.value(
+                    value: _controllers[StatsController] as StatsController),
+                ChangeNotifierProvider.value(
+                    value: _controllers[PromotionController] as PromotionController),
+                ChangeNotifierProvider.value(
+                    value: _controllers[ProfileController] as ProfileController),
+                ChangeNotifierProvider.value(
+                    value: _controllers[SocialMediaController] as SocialMediaController),
+                ChangeNotifierProvider.value(
+                    value: _controllers[PaymentMethodController] as PaymentMethodController),
+              ],
+              child: Consumer<ProfileController>(
+                builder: (context, profileController, child) {
+                  if (profileController.isLoading) {
+                    return const Scaffold(
+                        body: Center(child: CircularProgressIndicator()));
+                  }
+                  return profileController.hasProfile
+                      ? const MainAppShell()
+                      : const BusinessProfileEditPage();
+                },
               ),
             );
           },
-          tooltip: 'Ajustes',
-        ),
-        IconButton(
-          icon: const Icon(Icons.logout),
-          onPressed: _logout,
-          tooltip: 'Cerrar sesión',
-        ),
-      ];
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Padding(
-          padding: const EdgeInsets.only(top: 08.0),
-          child: Text(_pageTitles[_selectedIndex]),
-        ),
-        actions: appBarActions,
-      ),
-      // Muestra la página actual que tiene acceso al contexto correcto.
-      body: currentPage,
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
-          BottomNavigationBarItem(icon: Icon(Icons.fastfood), label: 'Productos'),
-          BottomNavigationBarItem(icon: Icon(Icons.receipt_long), label: 'Pedidos'),
-          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Estadísticas'),
-          BottomNavigationBarItem(icon: Icon(Icons.sell), label: 'Promociones'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
-        ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Theme.of(context).primaryColor,
-        unselectedItemColor: Colors.grey,
-        onTap: _onItemTapped,
-      ),
+        );
+      },
     );
   }
 }

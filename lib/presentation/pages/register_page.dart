@@ -1,13 +1,13 @@
+// Archivo: register_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:logging/logging.dart';
 import 'package:emprendedor/presentation/pages/phone_auth_page.dart';
 import 'package:emprendedor/presentation/pages/login_page.dart';
-import 'package:emprendedor/presentation/pages/home_screen.dart';
 import 'package:emprendedor/data/models/business_profile_model.dart';
 import 'package:emprendedor/data/repositories/business_profile_repository.dart';
-import 'package:flutter/gestures.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 final Logger logger = Logger('RegisterPage');
@@ -51,6 +51,7 @@ class _RegisterPageState extends State<RegisterPage> {
       SnackBar(
         content: Text(message),
         backgroundColor: isError ? Colors.red : Colors.green,
+        duration: const Duration(seconds: 3),
       ),
     );
   }
@@ -69,7 +70,6 @@ class _RegisterPageState extends State<RegisterPage> {
           password: _passwordController.text,
         );
 
-        // CREAMOS EL PERFIL DE NEGOCIO EN LA COLECCIÓN CORRECTA
         final userId = userCredential.user!.uid;
         final newProfile = BusinessProfileModel(
           userId: userId,
@@ -78,17 +78,23 @@ class _RegisterPageState extends State<RegisterPage> {
         await BusinessProfileRepository().createBusinessProfile(newProfile);
 
         if (!mounted) return;
-        _showSnackBar('¡Registro exitoso! Redirigiendo...');
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        _showSnackBar('¡Registro exitoso! Por favor, inicia sesión.');
+
+        // ⭐ NAVEGACIÓN CORREGIDA: Navega a la página de login después de un breve retraso
+        await Future.delayed(const Duration(seconds: 3));
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+              (Route<dynamic> route) => false,
         );
+
       } on FirebaseAuthException catch (e) {
         if (!mounted) return;
         String message;
         if (e.code == 'weak-password') {
           message = 'La contraseña es demasiado débil.';
         } else if (e.code == 'email-already-in-use') {
-          message = 'Ya existe una cuenta con este correo electrónico.';
+          message = 'Esta cuenta ya está registrada. Por favor, inicia sesión.';
         } else {
           message = e.message ?? 'Error de registro. Por favor, inténtelo de nuevo.';
         }
@@ -115,13 +121,13 @@ class _RegisterPageState extends State<RegisterPage> {
       _errorMessage = null;
     });
     try {
+      await GoogleSignIn().signOut();
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
 
       if (googleUser == null) {
         if (!mounted) return;
         return;
       }
-
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
@@ -137,14 +143,17 @@ class _RegisterPageState extends State<RegisterPage> {
           name: googleUser.displayName ?? 'Nuevo Emprendedor',
         );
         await BusinessProfileRepository().createBusinessProfile(newProfile);
-        _showSnackBar('¡Registro exitoso con Google!');
+        _showSnackBar('¡Registro exitoso con Google! Por favor, inicia sesión.');
       } else {
-        _showSnackBar('¡Inicio de sesión con Google exitoso!');
+        _showSnackBar('¡Inicio de sesión con Google exitoso! Redirigiendo...');
       }
 
+      // ⭐ NAVEGACIÓN CORREGIDA: Navega a la página de login después de un breve retraso
+      await Future.delayed(const Duration(seconds: 3));
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+              (Route<dynamic> route) => false,
         );
       }
     } on FirebaseAuthException catch (e) {
@@ -171,97 +180,11 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-  Future<void> _deleteAccount() async {
+  void _navigateToLogin() {
     if (!mounted) return;
-    final User? user = _auth.currentUser;
-
-    if (user == null) {
-      _showSnackBar('No hay usuario activo para eliminar. Por favor, inicia sesión primero.', isError: true);
-      return;
-    }
-
-    final currentContext = context;
-
-    final bool? shouldDelete = await showDialog<bool>(
-      context: currentContext,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) => AlertDialog(
-        title: const Text('Confirmar Eliminación de Cuenta'),
-        content: const SingleChildScrollView(
-          child: ListBody(
-            children: <Widget>[
-              Text('¿Estás absolutamente seguro de que quieres eliminar tu cuenta?'),
-              SizedBox(height: 10),
-              Text(
-                'Esta acción es irreversible y todos tus datos asociados serán eliminados permanentemente.',
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.redAccent),
-              ),
-              SizedBox(height: 10),
-              Text(
-                'IMPORTANTE: Para completar la eliminación, es posible que se te pida volver a iniciar sesión por seguridad.',
-                style: TextStyle(fontStyle: FontStyle.italic),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Sí, Eliminar'),
-          ),
-        ],
-      ),
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const LoginPage()),
     );
-
-    if (!mounted) return;
-
-    if (shouldDelete == true) {
-      setState(() {
-        _isLoading = true;
-      });
-      try {
-        final profileRepo = BusinessProfileRepository();
-        final profile = await profileRepo.getBusinessProfile(user.uid);
-        if (profile != null) {
-          await profileRepo.deleteBusinessProfile(profile.id!);
-        }
-
-        await user.delete();
-
-        if (!mounted) return;
-        _showSnackBar('Cuenta eliminada con éxito. Serás redirigido.');
-        await GoogleSignIn().signOut();
-
-        Navigator.of(currentContext).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const LoginPage()),
-              (Route<dynamic> route) => false,
-        );
-      } on FirebaseAuthException catch (e) {
-        if (!mounted) return;
-        String message;
-        if (e.code == 'requires-recent-login') {
-          message = 'Esta operación requiere un inicio de sesión reciente. Por favor, cierra sesión y vuelve a iniciarla, luego intenta eliminar la cuenta de nuevo.';
-        } else {
-          message = e.message ?? 'Error al eliminar la cuenta.';
-        }
-        setState(() {
-          _errorMessage = message;
-        });
-        _showSnackBar(message, isError: true);
-        logger.severe('Error al eliminar cuenta: ${e.code} - ${e.message}');
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
-      }
-    }
   }
 
   @override
@@ -391,45 +314,6 @@ class _RegisterPageState extends State<RegisterPage> {
                                   ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
                                   : const Text('Crear Cuenta', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                             ),
-                            const SizedBox(height: 20),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                              child: RichText(
-                                textAlign: TextAlign.center,
-                                text: TextSpan(
-                                  style: TextStyle(fontSize: 12, color: Colors.grey[800], height: 1.4),
-                                  children: <TextSpan>[
-                                    const TextSpan(text: 'Al crear una cuenta, aceptas nuestros '),
-                                    TextSpan(
-                                      text: 'Términos de Servicio',
-                                      style: TextStyle(
-                                        color: Theme.of(context).primaryColorDark,
-                                        fontWeight: FontWeight.bold,
-                                        decoration: TextDecoration.underline,
-                                      ),
-                                      recognizer: TapGestureRecognizer()
-                                        ..onTap = () {
-                                          _launchURL('https://gist.githubusercontent.com/Crearcos/aa6427fa1e5669e28f59d2af6210f02f/raw/8a51b809943d80337dd0912581cbb94621daccef/terms_of_service_miapp.html');
-                                        },
-                                    ),
-                                    const TextSpan(text: ' y '),
-                                    TextSpan(
-                                      text: 'Política de Privacidad',
-                                      style: TextStyle(
-                                        color: Theme.of(context).primaryColorDark,
-                                        fontWeight: FontWeight.bold,
-                                        decoration: TextDecoration.underline,
-                                      ),
-                                      recognizer: TapGestureRecognizer()
-                                        ..onTap = () {
-                                          _launchURL('https://gist.githubusercontent.com/Crearcos/363fe8dd01e6176d00fa50316e14b8e9/raw/9959ff87320f9563637fb986e2f34e32d0cdfe2a/privacy_policy_miapp.html');
-                                        },
-                                    ),
-                                    const TextSpan(text: '.'),
-                                  ],
-                                ),
-                              ),
-                            ),
                           ],
                         ),
                       ),
@@ -503,31 +387,12 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 30),
                   TextButton(
-                    onPressed: _isLoading ? null : () {
-                      if (mounted) {
-                        Navigator.of(context).pop();
-                      }
-                    },
+                    onPressed: _isLoading ? null : _navigateToLogin,
                     child: const Text(
                       '¿Ya tienes una cuenta? Inicia Sesión',
                       style: TextStyle(color: Colors.white, fontSize: 15),
                     ),
                   ),
-                  if (_auth.currentUser != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 16.0),
-                      child: TextButton.icon(
-                        icon: Icon(Icons.delete_forever_outlined, color: Colors.red.shade300),
-                        label: Text(
-                          'Eliminar Mi Cuenta',
-                          style: TextStyle(color: Colors.red.shade300, fontWeight: FontWeight.bold),
-                        ),
-                        onPressed: _isLoading ? null : _deleteAccount,
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        ),
-                      ),
-                    ),
                 ],
               ),
             ),

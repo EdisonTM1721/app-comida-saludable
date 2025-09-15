@@ -16,6 +16,7 @@ class OrderDetailPage extends StatefulWidget {
   @override
   State<OrderDetailPage> createState() => _OrderDetailPageState();
 }
+
 // Estado de la nueva página
 class _OrderDetailPageState extends State<OrderDetailPage> {
   @override
@@ -82,6 +83,42 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                         if (order.deliveredAt != null)
                           _buildDetailRow('Fecha Entrega:', dateFormat.format(order.deliveredAt!.toDate())),
                         _buildDetailRow('Total:', '\$${order.totalPrice.toStringAsFixed(2)}', isBold: true),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Sección de rastreo del paquete (la nueva sección)
+                _buildSectionTitle('Estado del Envío'),
+                Card(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 4,
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          _getTrackingStatusText(order.status),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.grey[700]),
+                        ),
+                        const SizedBox(height: 24),
+                        // Progress bar
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildStatusColumn('Pagado', _getTrackingStepColor(order.status, 'pending')),
+                            Expanded(child: Divider(color: _getTrackingStepColor(order.status, 'preparing'))),
+                            _buildStatusColumn('Preparando', _getTrackingStepColor(order.status, 'preparing')),
+                            Expanded(child: Divider(color: _getTrackingStepColor(order.status, 'shipped'))),
+                            _buildStatusColumn('Enviado', _getTrackingStepColor(order.status, 'shipped')),
+                            Expanded(child: Divider(color: _getTrackingStepColor(order.status, 'delivered'))),
+                            _buildStatusColumn('Entregado', _getTrackingStepColor(order.status, 'delivered')),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -175,6 +212,37 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     );
   }
 
+  // Metodo para obtener un color según el estado del rastreo
+  Color _getTrackingStepColor(OrderStatus currentStatus, String stepStatus) {
+    final statusMap = {
+      'pending': 1,
+      'preparing': 2,
+      'shipped': 3,
+      'delivered': 4,
+    };
+    final currentStep = statusMap[currentStatus.name] ?? 0;
+    final step = statusMap[stepStatus] ?? 0;
+    return currentStep >= step ? Colors.teal : Colors.grey;
+  }
+
+  // Metodo para obtener un texto descriptivo del estado del rastreo
+  String _getTrackingStatusText(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.pending:
+        return 'Su pago ha sido procesado. El pedido está pendiente de confirmación.';
+      case OrderStatus.preparing:
+        return 'Su pedido está siendo preparado para ser enviado.';
+      case OrderStatus.shipped:
+        return 'Su pedido ha sido enviado y está en camino.';
+      case OrderStatus.delivered:
+        return 'Su pedido ha sido entregado exitosamente.';
+      case OrderStatus.cancelled:
+        return 'El pedido ha sido cancelado.';
+      default:
+        return 'Estado desconocido del pedido.';
+    }
+  }
+
   // Metodo para obtener una cadena de texto que representa el estado del pedido
   Widget _buildSectionTitle(String title) {
     return Padding(
@@ -230,5 +298,19 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
       default:
         return Colors.grey.shade700;
     }
+  }
+
+  // Metodo para construir una columna de estado en el rastreo
+  Widget _buildStatusColumn(String title, Color color) {
+    return Column(
+      children: [
+        Icon(
+          color == Colors.teal ? Icons.check_circle : Icons.radio_button_unchecked,
+          color: color,
+        ),
+        const SizedBox(height: 4),
+        Text(title, style: TextStyle(color: color, fontSize: 12)),
+      ],
+    );
   }
 }

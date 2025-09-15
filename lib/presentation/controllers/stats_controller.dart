@@ -1,6 +1,9 @@
+// Archivo: stats_controller.dart (CORREGIDO)
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:logging/logging.dart';
 import 'package:emprendedor/data/models/stats_model.dart';
 import 'package:emprendedor/data/models/product_model.dart';
 import 'package:emprendedor/data/models/promotion_model.dart';
@@ -8,9 +11,8 @@ import 'package:emprendedor/data/repositories/stats_repository.dart';
 import 'package:emprendedor/data/repositories/product_repository.dart';
 import 'package:emprendedor/data/repositories/promotion_repository.dart';
 import 'package:emprendedor/services/report_exporter_service.dart';
-import 'package:logging/logging.dart';
 
-// Clase para el controlador de estadísticas
+// Definición de la clase StatsController
 class StatsController extends ChangeNotifier {
   final Logger _logger = Logger('StatsController');
 
@@ -57,36 +59,62 @@ class StatsController extends ChangeNotifier {
 
   String? _userId;
 
-  // Constructor
-  StatsController({required String userId}) {
-    _auth.authStateChanges().listen((user) {
-      _userId = user?.uid;
-      if (_userId != null) {
-        final today = DateTime.now();
-        _selectedDateRange = DateTimeRange(
-          start: today.subtract(const Duration(days: 30)),
-          end: today,
-        );
-        fetchStatistics();
-        _fetchPromotions();
-      } else {
-        _statisticsOverview = StatisticsOverview.empty();
-        _peakSalesHours = {};
-        _topProducts = [];
-        _promotions = [];
-        _promotionsSubscription?.cancel();
-        notifyListeners();
-      }
-    });
+  // Constructor ligero
+  StatsController();
+
+  // Método para inicializar el controlador
+  Future<void> setUserId(String? userId) async {
+    if (userId == null || userId == _userId) {
+      return;
+    }
+    _userId = userId;
+    final today = DateTime.now();
+    _selectedDateRange = DateTimeRange(
+      start: today.subtract(const Duration(days: 30)),
+      end: today,
+    );
+    await fetchStatistics();
+    _fetchPromotions();
+  }
+
+  // Lógica para manejar el deslogueo
+  void disposeController() {
+    _userId = null;
+    _statisticsOverview = StatisticsOverview.empty();
+    _peakSalesHours = {};
+    _topProducts = [];
+    _promotions = [];
+    _promotionsSubscription?.cancel();
+    notifyListeners();
+  }
+
+  // Getter para los datos de ventas actuales
+  List<SalesDataPoint> get currentSalesData {
+    if (_statisticsOverview == null) {
+      return [];
+    }
+    switch (_selectedSalesInterval) {
+      case SalesInterval.daily:
+        return _statisticsOverview!.dailySales;
+      case SalesInterval.weekly:
+        return _statisticsOverview!.weeklySales;
+      case SalesInterval.monthly:
+        return _statisticsOverview!.monthlySales;
+    }
   }
 
   // Métodos para interactuar con la base de datos
   Future<void> fetchStatistics() async {
-    if (_userId == null) return;
+    if (_userId == null) {
+      _setError("El ID de usuario no está disponible.");
+      notifyListeners();
+      return;
+    }
 
     _setLoading(true);
     _clearError();
-    notifyListeners();
+    // NOTA: El `notifyListeners()` se llama dentro de `_setLoading()` y `_setError()`,
+    // por lo que no es necesario aquí.
     try {
       _statisticsOverview = await _statsRepository.calculateStatisticsOverview(
         userId: _userId!,
@@ -140,6 +168,8 @@ class StatsController extends ChangeNotifier {
 
   // Métodos para interactuar con la base de datos
   void _fetchPromotions() {
+    if (_userId == null) return;
+    _promotionsSubscription?.cancel();
     _promotionsSubscription = _promotionRepository.getPromotions(_userId!).listen((promotions) {
       _promotions = promotions;
       notifyListeners();
@@ -166,21 +196,6 @@ class StatsController extends ChangeNotifier {
   }
 
   // Métodos para interactuar con la interfaz de usuario
-  List<SalesDataPoint> get currentSalesData {
-    if (_statisticsOverview == null) {
-      return [];
-    }
-    switch (_selectedSalesInterval) {
-      case SalesInterval.daily:
-        return _statisticsOverview!.dailySales;
-      case SalesInterval.weekly:
-        return _statisticsOverview!.weeklySales;
-      case SalesInterval.monthly:
-        return _statisticsOverview!.monthlySales;
-    }
-  }
-
-  // Métodos para interactuar con la interfaz de usuario
   Future<void> exportReport(String format) async {
     if (_statisticsOverview == null ||
         (_statisticsOverview!.dailySales.isEmpty &&
@@ -191,15 +206,11 @@ class StatsController extends ChangeNotifier {
       return;
     }
 
-    // Verificar que el formato de exportación sea válido
     _setLoading(true);
     _clearError();
-    notifyListeners();
 
-    // Formatear el nombre del archivo según el formato de exportación
     String fileTypeDescription = format.toLowerCase() == 'excel' ? "Excel" : "PDF";
 
-    // Exportar el reporte
     try {
       if (format.toLowerCase() == 'excel') {
         await _reportExporterService.exportToExcel(_statisticsOverview!, "reporte_estadisticas_tienda");

@@ -1,24 +1,123 @@
-import 'package:flutter/material.dart';
+// Archivo: presentation/pages/payment_methods_page.dart
 
-class PaymentMethodsPage extends StatefulWidget {
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:emprendedor/data/models/payment_method_model.dart';
+import 'package:emprendedor/presentation/controllers/payment_method_controller.dart';
+
+enum NotificationType { success, error, warning, info }
+
+class PaymentMethodsPage extends StatelessWidget {
   const PaymentMethodsPage({super.key});
 
   @override
-  State<PaymentMethodsPage> createState() => _PaymentMethodsPageState();
-}
+  Widget build(BuildContext context) {
+    final controller = context.watch<PaymentMethodController>();
 
-class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
-  final List<Map<String, dynamic>> _paymentMethods = [
-    // La lista inicia vacía para que solo se muestren los métodos agregados por el usuario.
-  ];
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Métodos de Pago'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            if (controller.isLoading && controller.paymentMethods.isEmpty)
+              const Center(child: CircularProgressIndicator())
+            else if (controller.errorMessage != null)
+              Center(child: Text(controller.errorMessage!))
+            else if (controller.paymentMethods.isNotEmpty)
+                Expanded(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: controller.paymentMethods.length,
+                    itemBuilder: (context, index) {
+                      final item = controller.paymentMethods[index];
+                      IconData icon;
+                      switch (item.name) {
+                        case 'Efectivo':
+                          icon = Icons.money;
+                          break;
+                        case 'Tarjeta de Crédito':
+                          icon = Icons.credit_card;
+                          break;
+                        case 'Tarjeta de Débito':
+                          icon = Icons.credit_card_outlined;
+                          break;
+                        case 'Transferencia Bancaria':
+                          icon = Icons.account_balance;
+                          break;
+                        case 'PayPal':
+                          icon = Icons.payment;
+                          break;
+                        default:
+                          icon = Icons.public;
+                      }
 
-  void _addPaymentMethod(String methodName) {
-    setState(() {
-      _paymentMethods.add({'name': methodName, 'details': ''});
-    });
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        child: ListTile(
+                          leading: Icon(icon, color: Colors.teal),
+                          title: Text(item.name),
+                          subtitle: Text(_formatDetails(item.details)),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit),
+                                onPressed: () {
+                                  _editPaymentMethod(context, controller, index);
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () {
+                                  controller.deletePaymentMethod(item.id!);
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                )
+              else
+                Expanded(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(Icons.credit_card, size: 80, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Text(
+                          'Aún no tienes métodos de pago creados.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 16, color: Colors.grey),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Pulsa el botón "+" para crear tu primer método de pago y empezar a gestionar tus pagos.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddOptions(context, controller),
+        backgroundColor: Colors.teal,
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.add),
+      ),
+    );
   }
 
-  void _showAddOptions(BuildContext context) {
+  void _showAddOptions(BuildContext context, PaymentMethodController controller) {
     showModalBottomSheet(
       context: context,
       builder: (BuildContext bc) {
@@ -29,7 +128,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                 leading: const Icon(Icons.money, color: Colors.green),
                 title: const Text('Efectivo'),
                 onTap: () {
-                  _addPaymentMethod('Efectivo');
+                  controller.addPaymentMethod(PaymentMethodModel(name: 'Efectivo'));
                   Navigator.pop(context);
                 },
               ),
@@ -37,7 +136,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                 leading: const Icon(Icons.credit_card, color: Colors.blue),
                 title: const Text('Tarjeta de Crédito'),
                 onTap: () {
-                  _addPaymentMethod('Tarjeta de Crédito');
+                  controller.addPaymentMethod(PaymentMethodModel(name: 'Tarjeta de Crédito'));
                   Navigator.pop(context);
                 },
               ),
@@ -45,7 +144,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                 leading: const Icon(Icons.credit_card_outlined, color: Colors.blueGrey),
                 title: const Text('Tarjeta de Débito'),
                 onTap: () {
-                  _addPaymentMethod('Tarjeta de Débito');
+                  controller.addPaymentMethod(PaymentMethodModel(name: 'Tarjeta de Débito'));
                   Navigator.pop(context);
                 },
               ),
@@ -53,7 +152,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                 leading: const Icon(Icons.account_balance, color: Colors.teal),
                 title: const Text('Transferencia Bancaria'),
                 onTap: () {
-                  _addPaymentMethod('Transferencia Bancaria');
+                  controller.addPaymentMethod(PaymentMethodModel(name: 'Transferencia Bancaria', details: {}));
                   Navigator.pop(context);
                 },
               ),
@@ -61,7 +160,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                 leading: const Icon(Icons.payment, color: Colors.indigo),
                 title: const Text('PayPal'),
                 onTap: () {
-                  _addPaymentMethod('PayPal');
+                  controller.addPaymentMethod(PaymentMethodModel(name: 'PayPal'));
                   Navigator.pop(context);
                 },
               ),
@@ -72,16 +171,17 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
     );
   }
 
-  void _editPaymentMethod(int index, String currentDetails) {
-    if (_paymentMethods[index]['name'] == 'Transferencia Bancaria') {
-      _editBankTransferDetails(index);
+  void _editPaymentMethod(BuildContext context, PaymentMethodController controller, int index) {
+    final item = controller.paymentMethods[index];
+    if (item.name == 'Transferencia Bancaria') {
+      _editBankTransferDetails(context, controller, item);
     } else {
-      final TextEditingController detailsController = TextEditingController(text: currentDetails);
+      final TextEditingController detailsController = TextEditingController(text: item.details ?? '');
       showDialog(
         context: context,
-        builder: (BuildContext context) {
+        builder: (BuildContext dialogContext) {
           return AlertDialog(
-            title: Text('Editar detalles de ${_paymentMethods[index]['name']}'),
+            title: Text('Editar detalles de ${item.name}'),
             content: TextField(
               controller: detailsController,
               decoration: const InputDecoration(
@@ -93,16 +193,15 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
               TextButton(
                 child: const Text('Cancelar'),
                 onPressed: () {
-                  Navigator.of(context).pop();
+                  Navigator.of(dialogContext).pop();
                 },
               ),
               TextButton(
                 child: const Text('Guardar'),
                 onPressed: () {
-                  setState(() {
-                    _paymentMethods[index]['details'] = detailsController.text;
-                  });
-                  Navigator.of(context).pop();
+                  final updatedItem = item.copyWith(details: detailsController.text);
+                  controller.updatePaymentMethod(updatedItem);
+                  Navigator.of(dialogContext).pop();
                 },
               ),
             ],
@@ -112,8 +211,8 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
     }
   }
 
-  void _editBankTransferDetails(int index) {
-    final Map<String, dynamic> currentData = _paymentMethods[index]['details'] is Map ? _paymentMethods[index]['details'] : {};
+  void _editBankTransferDetails(BuildContext context, PaymentMethodController controller, PaymentMethodModel item) {
+    final Map<String, dynamic> currentData = item.details is Map ? item.details : {};
     final TextEditingController bankNameController = TextEditingController(text: currentData['banco'] ?? '');
     final TextEditingController accountNumberController = TextEditingController(text: currentData['numero_cuenta'] ?? '');
     final TextEditingController idCardController = TextEditingController(text: currentData['cedula'] ?? '');
@@ -122,7 +221,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
 
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: const Text('Detalles de Transferencia Bancaria'),
           content: SingleChildScrollView(
@@ -156,22 +255,22 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
             TextButton(
               child: const Text('Cancelar'),
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
               },
             ),
             TextButton(
               child: const Text('Guardar'),
               onPressed: () {
-                setState(() {
-                  _paymentMethods[index]['details'] = {
-                    'propietario': ownerNameController.text,
-                    'banco': bankNameController.text,
-                    'numero_cuenta': accountNumberController.text,
-                    'cedula': idCardController.text,
-                    'correo': emailController.text,
-                  };
-                });
-                Navigator.of(context).pop();
+                final updatedDetails = {
+                  'propietario': ownerNameController.text,
+                  'banco': bankNameController.text,
+                  'numero_cuenta': accountNumberController.text,
+                  'cedula': idCardController.text,
+                  'correo': emailController.text,
+                };
+                final updatedItem = item.copyWith(details: updatedDetails);
+                controller.updatePaymentMethod(updatedItem);
+                Navigator.of(dialogContext).pop();
               },
             ),
           ],
@@ -180,109 +279,17 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
     );
   }
 
-  void _deletePaymentMethod(int index) {
-    setState(() {
-      _paymentMethods.removeAt(index);
-    });
-  }
-
   String _formatDetails(dynamic details) {
     if (details is Map) {
       String formatted = '';
       details.forEach((key, value) {
         if (value.isNotEmpty) {
-          formatted += '${key.toString().replaceAll('_', ' ')}: $value\n';
+          final formattedKey = key.toString().replaceAll('_', ' ');
+          formatted += '${formattedKey[0].toUpperCase()}${formattedKey.substring(1)}: $value\n';
         }
       });
       return formatted.trim();
     }
     return details ?? 'Añadir detalles';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Métodos de Pago'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            if (_paymentMethods.isNotEmpty)
-              Expanded(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: _paymentMethods.length,
-                  itemBuilder: (context, index) {
-                    final item = _paymentMethods[index];
-                    IconData icon;
-                    switch (item['name']) {
-                      case 'Efectivo':
-                        icon = Icons.money;
-                        break;
-                      case 'Tarjeta de Crédito':
-                        icon = Icons.credit_card;
-                        break;
-                      case 'Tarjeta de Débito':
-                        icon = Icons.credit_card_outlined;
-                        break;
-                      case 'Transferencia Bancaria':
-                        icon = Icons.account_balance;
-                        break;
-                      case 'PayPal':
-                        icon = Icons.payment;
-                        break;
-                      default:
-                        icon = Icons.public;
-                    }
-
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      child: ListTile(
-                        leading: Icon(icon, color: Colors.teal),
-                        title: Text(item['name']),
-                        subtitle: Text(_formatDetails(item['details'])),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit),
-                              onPressed: () {
-                                _editPaymentMethod(index, item['details'] ?? '');
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () {
-                                _deletePaymentMethod(index);
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              )
-            else
-              const Expanded(
-                child: Center(
-                  child: Text(
-                    'Aquí se gestionarán los métodos de pago',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                ),
-              ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () => _showAddOptions(context),
-              icon: const Icon(Icons.add),
-              label: const Text('Añadir Método de Pago'),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

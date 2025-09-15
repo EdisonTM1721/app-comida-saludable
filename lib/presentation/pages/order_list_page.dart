@@ -1,41 +1,53 @@
+// Archivo: order_list_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:emprendedor/presentation/controllers/order_controller.dart';
 import 'package:emprendedor/presentation/widgets/order_list_item.dart';
+import 'package:emprendedor/presentation/pages/order_detail_page.dart';
 
-// Nueva página para la gestión de pedidos
 class OrderListPage extends StatefulWidget {
   const OrderListPage({super.key});
 
-  // Metodo para crear una nueva instancia de la página
   @override
   State<OrderListPage> createState() => _OrderListPageState();
 }
 
-// Estado de la nueva página
 class _OrderListPageState extends State<OrderListPage> {
   @override
   void initState() {
     super.initState();
+    // ⭐ CORRECCIÓN: Se envuelve la llamada a `fetchOrders` en un callback.
+    // Esto asegura que la función se ejecute DESPUÉS de que el widget se haya construido.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<OrderController>(context, listen: false).fetchOrders();
+    });
   }
 
-  // Construir la página
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Consumer<OrderController>(
         builder: (context, controller, child) {
+          // 1. Muestra un indicador de carga si los datos aún no se han cargado.
           if (controller.isLoading && controller.orders.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (controller.errorMessage != null && controller.orders.isEmpty) {
+
+          // 2. Si hay un mensaje de error y la lista no está vacía, muestra el error.
+          if (controller.errorMessage != null && controller.orders.isNotEmpty) {
             return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text('Error: ${controller.errorMessage}\nPor favor, intenta de nuevo.', textAlign: TextAlign.center),
-                )
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  'Error: ${controller.errorMessage}\nPor favor, intenta de nuevo.',
+                  textAlign: TextAlign.center,
+                ),
+              ),
             );
           }
+
+          // 3. Si la lista está vacía, muestra el mensaje amigable.
           if (controller.orders.isEmpty) {
             return const Center(
               child: Text(
@@ -46,7 +58,7 @@ class _OrderListPageState extends State<OrderListPage> {
             );
           }
 
-          // Mostrar la lista de pedidos
+          // 4. Muestra la lista de pedidos.
           return RefreshIndicator(
             onRefresh: () => controller.fetchOrders(),
             child: ListView.builder(
@@ -54,7 +66,16 @@ class _OrderListPageState extends State<OrderListPage> {
               itemCount: controller.orders.length,
               itemBuilder: (context, index) {
                 final order = controller.orders[index];
-                return OrderListItem(order: order);
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => OrderDetailPage(orderId: order.id!),
+                      ),
+                    );
+                  },
+                  child: OrderListItem(order: order),
+                );
               },
             ),
           );

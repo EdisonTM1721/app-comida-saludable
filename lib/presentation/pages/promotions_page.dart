@@ -9,7 +9,6 @@ import 'package:emprendedor/presentation/pages/create_coupon_page.dart';
 class PromotionsPage extends StatelessWidget {
   const PromotionsPage({super.key});
 
-  // Metodo para navegar a la página de EDICIÓN de una promoción
   void _navigateToEditPromotion(BuildContext context, PromotionModel promotion) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -18,7 +17,6 @@ class PromotionsPage extends StatelessWidget {
     );
   }
 
-  // Metodo para navegar a la página de CREACIÓN de una promoción
   void _navigateToCreatePromotion(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -27,7 +25,6 @@ class PromotionsPage extends StatelessWidget {
     );
   }
 
-  // Metodo para navegar a la página de CREACIÓN de un cupón
   void _navigateToCreateCoupon(BuildContext context, PromotionModel promotion) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -36,7 +33,6 @@ class PromotionsPage extends StatelessWidget {
     );
   }
 
-  // Metodo para mostrar el panel de opciones de agregar promoción
   void _showAddPromotionOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -84,7 +80,6 @@ class PromotionsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final promotionController = Provider.of<PromotionController>(context);
 
-    // Retorna directamente el contenido de la página, sin un Scaffold
     return RefreshIndicator(
       onRefresh: () => promotionController.fetchPromotions(),
       child: Stack(
@@ -109,19 +104,9 @@ class PromotionsPage extends StatelessWidget {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (controller.errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Text(
-            'Error al cargar promociones: ${controller.errorMessage}',
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.red, fontSize: 16),
-          ),
-        ),
-      );
-    }
-
+    // Esta es la lógica clave. Si la lista está vacía, siempre muestra el mensaje amigable.
+    // Solo muestra el error si la lista NO está vacía pero hay un error,
+    // o si el mensaje de error no está relacionado con los permisos.
     if (controller.promotions.isEmpty) {
       return const Center(
         child: SingleChildScrollView(
@@ -146,6 +131,19 @@ class PromotionsPage extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ),
+      );
+    }
+
+    if (controller.errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text(
+            'Error al cargar promociones: ${controller.errorMessage}',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.red, fontSize: 16),
           ),
         ),
       );
