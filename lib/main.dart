@@ -5,6 +5,8 @@ import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
+
+// Importaciones locales
 import 'firebase_options.dart';
 import 'package:emprendedor/presentation/controllers/product_controller.dart';
 import 'package:emprendedor/presentation/controllers/order_controller.dart';
@@ -21,29 +23,54 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   _setupLogging();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  // 1. INICIALIZACIÓN DE FIREBASE CON PROTECCIÓN ANTI-DUPLICADO
+  try {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      debugPrint("✅ Firebase inicializado con éxito.");
+    } else {
+      debugPrint("ℹ️ Firebase ya estaba activo, saltando inicialización.");
+    }
+  } catch (e) {
+    // Si sale el error de duplicate-app, lo atrapamos aquí para que la app continúe
+    if (e.toString().contains('duplicate-app')) {
+      debugPrint("⚠️ Aviso: Firebase ya existe (duplicado ignorado).");
+    } else {
+      debugPrint("❌ Error inesperado en Firebase: $e");
+    }
+  }
 
-  // Activar Firebase App Check
+  // 2. CONFIGURACIÓN DE APP CHECK Y OBTENCIÓN DEL TOKEN
   if (kDebugMode) {
     try {
-      logger.info("Activando Firebase App Check en modo DEBUG...");
-      await FirebaseAppCheck.instance.activate(androidProvider: AndroidProvider.debug);
-      logger.info("✅ App Check activado en DEBUG.");
-    } catch (e, stackTrace) {
-      logger.severe("❌ Error App Check DEBUG: $e", e, stackTrace);
+      debugPrint("🚀 Activando App Check y generando token...");
+
+      await FirebaseAppCheck.instance.activate(
+        androidProvider: AndroidProvider.debug,
+        appleProvider: AppleProvider.debug,
+      );
+
+      // SOLICITUD DEL TOKEN PARA LA CONSOLA DE FIREBASE
+      String? debugToken = await FirebaseAppCheck.instance.getToken();
+
+      print('\n' + '💎' * 40);
+      print('*** COPIA ESTE TOKEN EN LA CONSOLA DE FIREBASE ***');
+      print('$debugToken');
+      print('💎' * 40 + '\n');
+
+    } catch (e) {
+      debugPrint("❌ Error al obtener el token de App Check: $e");
     }
   } else {
     try {
-      logger.info("Activando Firebase App Check en PRODUCCIÓN...");
       await FirebaseAppCheck.instance.activate(
         androidProvider: AndroidProvider.playIntegrity,
         appleProvider: AppleProvider.appAttest,
       );
-      logger.info("✅ App Check activado en PRODUCCIÓN.");
-    } catch (e, stackTrace) {
-      logger.severe("❌ Error App Check PRODUCCIÓN: $e", e, stackTrace);
+    } catch (e) {
+      debugPrint("❌ Error en App Check Producción: $e");
     }
   }
 
@@ -53,9 +80,7 @@ Future<void> main() async {
 void _setupLogging() {
   Logger.root.level = Level.ALL;
   Logger.root.onRecord.listen((record) {
-    print('[${record.level.name}] ${record.time} [${record.loggerName}]: ${record.message}');
-    if (record.error != null) print('  ERROR: ${record.error}');
-    if (record.stackTrace != null) print('  STACKTRACE: ${record.stackTrace}');
+    debugPrint('[${record.level.name}] ${record.time} [${record.loggerName}]: ${record.message}');
   });
 }
 
@@ -66,16 +91,17 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<ProductController>(create: (_) => ProductController()),
-        ChangeNotifierProvider<OrderController>(create: (_) => OrderController()),
-        ChangeNotifierProvider<StatsController>(create: (_) => StatsController()),
-        ChangeNotifierProvider<PromotionController>(create: (_) => PromotionController()),
-        ChangeNotifierProvider<ProfileController>(create: (_) => ProfileController()),
-        ChangeNotifierProvider<SocialMediaController>(create: (_) => SocialMediaController()),
-        ChangeNotifierProvider<PaymentMethodController>(create: (_) => PaymentMethodController()),
+        ChangeNotifierProvider(create: (_) => ProductController()),
+        ChangeNotifierProvider(create: (_) => OrderController()),
+        ChangeNotifierProvider(create: (_) => StatsController()),
+        ChangeNotifierProvider(create: (_) => PromotionController()),
+        ChangeNotifierProvider(create: (_) => ProfileController()),
+        ChangeNotifierProvider(create: (_) => SocialMediaController()),
+        ChangeNotifierProvider(create: (_) => PaymentMethodController()),
       ],
       child: MaterialApp(
         title: 'App Emprendedor',
+        debugShowCheckedModeBanner: false,
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
@@ -84,41 +110,24 @@ class MyApp extends StatelessWidget {
         supportedLocales: const [Locale('es', 'ES')],
         locale: const Locale('es', 'ES'),
         theme: ThemeData(
-          primarySwatch: Colors.teal,
-          colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.teal)
-              .copyWith(secondary: Colors.amberAccent),
-          visualDensity: VisualDensity.adaptivePlatformDensity,
-          inputDecorationTheme: const InputDecorationTheme(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(8.0)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.teal, width: 2.0),
-              borderRadius: BorderRadius.all(Radius.circular(8.0)),
-            ),
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.teal,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-            ),
-          ),
-          floatingActionButtonTheme: const FloatingActionButtonThemeData(
-            backgroundColor: Colors.amberAccent,
-            foregroundColor: Colors.black,
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.teal,
+            primary: Colors.teal,
+            secondary: Colors.amberAccent,
           ),
           appBarTheme: const AppBarTheme(
             backgroundColor: Colors.teal,
             foregroundColor: Colors.white,
             elevation: 2,
+            centerTitle: true,
+          ),
+          inputDecorationTheme: const InputDecorationTheme(
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(8.0)),
+            ),
           ),
         ),
-        debugShowCheckedModeBanner: false,
         home: const AuthWrapper(),
       ),
     );

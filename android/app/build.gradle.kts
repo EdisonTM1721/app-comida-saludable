@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.crearcos.emprendedor"
+    namespace = "com.proyecto_titulacion.app"
     compileSdk = 36
 
     compileOptions {
@@ -15,7 +15,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.crearcos.emprendedor"
+        applicationId = "com.proyecto_titulacion.app"
         minSdk = flutter.minSdkVersion
         targetSdk = 36
         versionCode = flutter.versionCode
