@@ -1,28 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:logging/logging.dart';
 import 'package:provider/provider.dart';
-import 'package:emprendedor/presentation/controllers/product_controller.dart';
-import 'package:emprendedor/presentation/controllers/order_controller.dart';
-import 'package:emprendedor/presentation/controllers/stats_controller.dart';
-import 'package:emprendedor/presentation/controllers/promotion_controller.dart';
+
 import 'package:emprendedor/presentation/controllers/profile_controller.dart';
-import 'package:emprendedor/presentation/controllers/social_media_controller.dart';
-import 'package:emprendedor/presentation/controllers/payment_method_controller.dart';
 import 'package:emprendedor/presentation/pages/login_page.dart';
 import 'package:emprendedor/presentation/pages/business_profile_edit_page.dart';
 import 'package:emprendedor/presentation/pages/main_app_shell.dart';
+import 'package:emprendedor/presentation/pages/cliente_home_page.dart';
+import 'package:emprendedor/presentation/pages/nutricionista_home_page.dart';
+import 'package:emprendedor/data/models/business_profile_model.dart';
 
-final Logger logger = Logger('AuthWrapperLogger');
-
-class AuthWrapper extends StatefulWidget {
+class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
-  @override
-  State<AuthWrapper> createState() => _AuthWrapperState();
-}
+  Future<void> _initProfile(BuildContext context, User user) async {
+    final profileController = context.read<ProfileController>();
+    await profileController.setUserId(user.uid);
+  }
 
-class _AuthWrapperState extends State<AuthWrapper> {
+  bool _isEntrepreneurProfileComplete(BusinessProfileModel profile) {
+    final hasName = profile.name.trim().isNotEmpty &&
+        profile.name.trim().toLowerCase() != 'nuevo emprendedor';
+
+    final hasDescription =
+        profile.description != null && profile.description!.trim().isNotEmpty;
+
+    final hasAddress =
+        profile.address != null && profile.address!.trim().isNotEmpty;
+
+    final hasOpeningHours =
+        profile.openingHours != null && profile.openingHours!.trim().isNotEmpty;
+
+    return hasName && hasDescription && hasAddress && hasOpeningHours;
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
@@ -35,48 +46,51 @@ class _AuthWrapperState extends State<AuthWrapper> {
         }
 
         final user = snapshot.data;
+
         if (user == null) {
-          logger.info("Usuario no autenticado. Navegando a LoginPage.");
-          _clearControllers(context);
           return const LoginPage();
         }
 
-        logger.info("Usuario autenticado. ID: ${user.uid}");
-        _updateControllers(context, user.uid);
-
-        return Consumer<ProfileController>(
-          builder: (context, profileController, child) {
-            if (profileController.isLoading) {
+        return FutureBuilder<void>(
+          future: _initProfile(context, user),
+          builder: (context, profileSnapshot) {
+            if (profileSnapshot.connectionState == ConnectionState.waiting) {
               return const Scaffold(
                 body: Center(child: CircularProgressIndicator()),
               );
             }
-            return profileController.hasProfile
-                ? const MainAppShell()
-                : const BusinessProfileEditPage();
+
+            final profileController = context.watch<ProfileController>();
+            final profile = profileController.businessProfile;
+
+            if (profile == null) {
+              return const BusinessProfileEditPage();
+            }
+
+            final role = profile.role.trim().toLowerCase();
+
+            if (role == 'cliente') {
+              return const ClienteHomePage();
+            }
+
+            if (role == 'nutricionista') {
+              return const NutricionistaHomePage();
+            }
+
+            if (role == 'emprendedor') {
+              final isComplete = _isEntrepreneurProfileComplete(profile);
+
+              if (!isComplete) {
+                return const BusinessProfileEditPage();
+              }
+
+              return const MainAppShell();
+            }
+
+            return const MainAppShell();
           },
         );
       },
     );
-  }
-
-  void _updateControllers(BuildContext context, String userId) {
-    Provider.of<ProductController>(context, listen: false).setUserId(userId);
-    Provider.of<OrderController>(context, listen: false).setUserId(userId);
-    Provider.of<StatsController>(context, listen: false).setUserId(userId);
-    Provider.of<PromotionController>(context, listen: false).setUserId(userId);
-    Provider.of<ProfileController>(context, listen: false).setUserId(userId);
-    Provider.of<SocialMediaController>(context, listen: false).setUserId(userId);
-    Provider.of<PaymentMethodController>(context, listen: false).setUserId(userId);
-  }
-
-  void _clearControllers(BuildContext context) {
-    Provider.of<ProductController>(context, listen: false).setUserId(null);
-    Provider.of<OrderController>(context, listen: false).setUserId(null);
-    Provider.of<StatsController>(context, listen: false).setUserId(null);
-    Provider.of<PromotionController>(context, listen: false).setUserId(null);
-    Provider.of<ProfileController>(context, listen: false).setUserId(null);
-    Provider.of<SocialMediaController>(context, listen: false).setUserId(null);
-    Provider.of<PaymentMethodController>(context, listen: false).setUserId(null);
   }
 }

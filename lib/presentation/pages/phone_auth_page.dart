@@ -5,29 +5,30 @@ import 'package:emprendedor/data/repositories/business_profile_repository.dart';
 import 'package:emprendedor/presentation/pages/login_page.dart';
 import 'package:emprendedor/presentation/pages/auth_wrapper.dart';
 
-// Nueva página para autenticación por teléfono
 class PhoneAuthPage extends StatefulWidget {
   final bool isLogin;
+  final String selectedRole;
 
-  // Método para crear una nueva instancia de la página
-  const PhoneAuthPage({super.key, required this.isLogin});
+  const PhoneAuthPage({
+    super.key,
+    required this.isLogin,
+    this.selectedRole = 'emprendedor',
+  });
 
-  // Estado de la nueva página
   @override
   State<PhoneAuthPage> createState() => _PhoneAuthPageState();
 }
 
-// Estado de la nueva página
 class _PhoneAuthPageState extends State<PhoneAuthPage> {
   final _auth = FirebaseAuth.instance;
   final _phoneController = TextEditingController();
   final _otpController = TextEditingController();
+
   String _verificationId = '';
   String? _errorMessage;
   bool _otpSent = false;
   bool _isLoading = false;
 
-  // Lista de códigos de país
   final List<Map<String, String>> _countryCodes = [
     {'name': 'Argentina', 'code': '+54'},
     {'name': 'Bolivia', 'code': '+591'},
@@ -51,12 +52,20 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
     {'name': 'España', 'code': '+34'},
     {'name': 'Estados Unidos', 'code': '+1'},
   ];
+
   String _selectedCountryCode = '+593';
   String _selectedCountryName = 'Ecuador';
 
-  // Método para crear una nueva instancia de la página
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    _otpController.dispose();
+    super.dispose();
+  }
+
   void _showSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -66,12 +75,32 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
     );
   }
 
-  // Método para seleccionar un país
+  String _defaultNameByRole(String role) {
+    switch (role) {
+      case 'cliente':
+        return 'Nuevo Cliente';
+      case 'nutricionista':
+        return 'Nuevo Nutricionista';
+      default:
+        return 'Nuevo Emprendedor';
+    }
+  }
+
+  Future<void> _goToAuthWrapper() async {
+    if (!mounted) return;
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const AuthWrapper()),
+          (route) => false,
+    );
+  }
+
   Future<void> _selectCountry() async {
     final selectedCountry = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) {
         List<Map<String, String>> filteredCountries = _countryCodes;
+
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
@@ -89,8 +118,11 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
                       onChanged: (query) {
                         setState(() {
                           filteredCountries = _countryCodes
-                              .where((country) =>
-                              country['name']!.toLowerCase().contains(query.toLowerCase()))
+                              .where(
+                                (country) => country['name']!
+                                .toLowerCase()
+                                .contains(query.toLowerCase()),
+                          )
                               .toList();
                         });
                       },
@@ -121,7 +153,6 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
       },
     );
 
-    // Actualiza el estado con el país seleccionado
     if (selectedCountry != null) {
       setState(() {
         _selectedCountryCode = selectedCountry['code']!;
@@ -134,9 +165,13 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
     final fullPhoneNumber = '$_selectedCountryCode${_phoneController.text.trim()}';
 
     if (_phoneController.text.trim().isEmpty) {
-      _showSnackBar('Por favor, introduce un número de teléfono válido.', isError: true);
+      _showSnackBar(
+        'Por favor, introduce un número de teléfono válido.',
+        isError: true,
+      );
       return;
     }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -150,91 +185,118 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
         },
         verificationFailed: (FirebaseAuthException e) {
           String message = 'Error de verificación: ${e.message}';
+
           if (e.code == 'invalid-phone-number') {
             message = 'El número de teléfono proporcionado no es válido.';
           } else if (e.code == 'too-many-requests') {
-            message = 'Se han enviado demasiadas solicitudes. Inténtelo más tarde.';
+            message =
+            'Se han enviado demasiadas solicitudes. Inténtelo más tarde.';
           }
-          setState(() {
-            _errorMessage = message;
-          });
+
+          if (mounted) {
+            setState(() {
+              _errorMessage = message;
+              _isLoading = false;
+            });
+          }
+
           _showSnackBar(message, isError: true);
         },
         codeSent: (String verificationId, int? resendToken) {
-          setState(() {
-            _verificationId = verificationId;
-            _otpSent = true;
-            _isLoading = false;
-          });
+          if (mounted) {
+            setState(() {
+              _verificationId = verificationId;
+              _otpSent = true;
+              _isLoading = false;
+            });
+          }
+
           _showSnackBar('Código enviado al número de teléfono.');
         },
         codeAutoRetrievalTimeout: (String verificationId) {
-          setState(() {
-            _verificationId = verificationId;
-            _isLoading = false;
-          });
+          if (mounted) {
+            setState(() {
+              _verificationId = verificationId;
+              _isLoading = false;
+            });
+          }
         },
       );
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Ocurrió un error inesperado. Inténtelo de nuevo.';
-      });
-      _showSnackBar(_errorMessage!, isError: true);
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Ocurrió un error inesperado. Inténtelo de nuevo.';
+          _isLoading = false;
+        });
+      }
+
+      _showSnackBar(
+        'Ocurrió un error inesperado. Inténtelo de nuevo.',
+        isError: true,
+      );
     }
   }
 
-  // Método para iniciar sesión con credenciales
   Future<void> _signInWithCredential(PhoneAuthCredential credential) async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
-      final UserCredential userCredential = await _auth.signInWithCredential(credential);
+      final UserCredential userCredential =
+      await _auth.signInWithCredential(credential);
+
+      if (!mounted) return;
 
       if (userCredential.additionalUserInfo?.isNewUser == true) {
         final newProfile = BusinessProfileModel(
           userId: userCredential.user!.uid,
-          name: 'Nuevo Emprendedor',
+          name: _defaultNameByRole(widget.selectedRole),
+          role: widget.selectedRole,
         );
-        // La llamada a Firestore ahora está dentro de un try-catch general
+
         await BusinessProfileRepository().createBusinessProfile(newProfile);
 
-        _showSnackBar('¡Registro exitoso! Por favor, inicia sesión con tu número.');
-        if (mounted) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const LoginPage()),
-                (Route<dynamic> route) => false,
-          );
-        }
+        _showSnackBar('¡Registro exitoso con teléfono!');
       } else {
-        _showSnackBar('¡Inicio de sesión exitoso! Redirigiendo...');
-        if (mounted) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const AuthWrapper()),
-                (Route<dynamic> route) => false,
-          );
-        }
-      }
-    } catch (e) {
-      String message = 'Error: No se pudo completar la operación. Por favor, inténtalo de nuevo.';
-      if (e is FirebaseAuthException) {
-        // Maneja errores específicos de Firebase Auth si es necesario
-        message = 'Error de autenticación: Código inválido o expirado.';
-      } else {
-        // Muestra un mensaje de error más específico para problemas de permisos
-        message = 'Error en la base de datos: Falta de permisos. Asegúrate de que tus reglas de seguridad de Firestore sean correctas.';
+        _showSnackBar('¡Inicio de sesión exitoso!');
       }
 
-      setState(() {
-        _errorMessage = message;
-      });
+      await _goToAuthWrapper();
+    } on FirebaseAuthException catch (e) {
+      String message;
+
+      if (e.code == 'invalid-verification-code') {
+        message = 'El código ingresado es inválido.';
+      } else if (e.code == 'session-expired') {
+        message = 'El código ha expirado. Solicita uno nuevo.';
+      } else {
+        message =
+            e.message ??
+                'No se pudo completar la operación. Inténtalo de nuevo.';
+      }
+
+      if (mounted) {
+        setState(() {
+          _errorMessage = message;
+        });
+      }
+
       _showSnackBar(message, isError: true);
+    } catch (e) {
+      const message =
+          'Error en la base de datos o permisos insuficientes. Revisa Firestore.';
 
+      if (mounted) {
+        setState(() {
+          _errorMessage = message;
+        });
+      }
+
+      _showSnackBar(message, isError: true);
     } finally {
       if (mounted) {
         setState(() {
@@ -244,20 +306,23 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
     }
   }
 
-  // Método para verificar el código de verificación
   Future<void> _verifyOtp() async {
     if (_otpController.text.trim().isEmpty) {
-      _showSnackBar('Por favor, introduce el código de verificación.', isError: true);
+      _showSnackBar(
+        'Por favor, introduce el código de verificación.',
+        isError: true,
+      );
       return;
     }
+
     final credential = PhoneAuthProvider.credential(
       verificationId: _verificationId,
       smsCode: _otpController.text.trim(),
     );
+
     await _signInWithCredential(credential);
   }
 
-  // Construir la página
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -273,14 +338,28 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                widget.isLogin ? 'Inicia Sesión con tu Teléfono' : 'Regístrate con tu Teléfono',
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                widget.isLogin
+                    ? 'Inicia Sesión con tu Teléfono'
+                    : 'Regístrate con tu Teléfono',
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
                 textAlign: TextAlign.center,
               ),
+              if (!widget.isLogin) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Tipo de cuenta: ${widget.selectedRole}',
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
               const SizedBox(height: 32),
               Card(
                 elevation: 8,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(24.0),
                   child: Column(
@@ -290,12 +369,15 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
                         readOnly: true,
                         onTap: _selectCountry,
                         decoration: InputDecoration(
-                            labelText: 'País',
-                            prefixIcon: const Icon(Icons.location_on),
-                            suffixIcon: const Icon(Icons.arrow_drop_down),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                            hintText: '$_selectedCountryName ($_selectedCountryCode)',
-                            hintStyle: const TextStyle(color: Colors.black87)
+                          labelText: 'País',
+                          prefixIcon: const Icon(Icons.location_on),
+                          suffixIcon: const Icon(Icons.arrow_drop_down),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          hintText:
+                          '$_selectedCountryName ($_selectedCountryCode)',
+                          hintStyle: const TextStyle(color: Colors.black87),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -305,7 +387,9 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
                         decoration: InputDecoration(
                           labelText: 'Número de Teléfono',
                           prefixIcon: const Icon(Icons.phone),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -315,11 +399,18 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
                           backgroundColor: Theme.of(context).primaryColor,
                           foregroundColor: Colors.white,
                           minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         child: _isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text('Enviar Código de Verificación', style: TextStyle(fontSize: 16)),
+                            ? const CircularProgressIndicator(
+                          color: Colors.white,
+                        )
+                            : const Text(
+                          'Enviar Código de Verificación',
+                          style: TextStyle(fontSize: 16),
+                        ),
                       ),
                       if (_otpSent) ...[
                         const SizedBox(height: 24),
@@ -329,7 +420,9 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
                           decoration: InputDecoration(
                             labelText: 'Código de Verificación',
                             prefixIcon: const Icon(Icons.sms),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 24),
@@ -339,11 +432,18 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
                             backgroundColor: Colors.green.shade600,
                             foregroundColor: Colors.white,
                             minimumSize: const Size(double.infinity, 50),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           child: _isLoading
-                              ? const CircularProgressIndicator(color: Colors.white)
-                              : const Text('Verificar y Continuar', style: TextStyle(fontSize: 16)),
+                              ? const CircularProgressIndicator(
+                            color: Colors.white,
+                          )
+                              : const Text(
+                            'Verificar y Continuar',
+                            style: TextStyle(fontSize: 16),
+                          ),
                         ),
                       ],
                     ],
@@ -353,26 +453,39 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
               if (_errorMessage != null) ...[
                 const SizedBox(height: 16),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.redAccent.withAlpha((0.8 * 255).round()),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     _errorMessage!,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ),
               ],
               const SizedBox(height: 24),
               TextButton(
-                onPressed: _isLoading ? null : () {
+                onPressed: _isLoading
+                    ? null
+                    : () {
                   Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (context) => const LoginPage()),
+                    MaterialPageRoute(
+                      builder: (context) => const LoginPage(),
+                    ),
                   );
                 },
-                child: const Text('Volver a la página de inicio de sesión', style: TextStyle(color: Colors.blueAccent)),
+                child: const Text(
+                  'Volver a la página de inicio de sesión',
+                  style: TextStyle(color: Colors.blueAccent),
+                ),
               ),
             ],
           ),

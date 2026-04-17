@@ -33,7 +33,6 @@ android {
 kotlin {
     jvmToolchain(17)
 }
-
 // Dependencias de la aplicación
 dependencies {
     implementation(platform("com.google.firebase:firebase-bom:34.2.0"))

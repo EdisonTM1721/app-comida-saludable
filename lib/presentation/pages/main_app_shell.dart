@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+
 import 'package:emprendedor/presentation/controllers/promotion_controller.dart';
 import 'package:emprendedor/presentation/pages/home_page.dart';
 import 'package:emprendedor/presentation/pages/product_list_page.dart';
-import 'package:emprendedor/presentation/pages/order_list_page.dart'; // <-- import actualizado
+import 'package:emprendedor/presentation/pages/order_list_page.dart';
 import 'package:emprendedor/presentation/pages/statistics_page.dart';
 import 'package:emprendedor/presentation/pages/promotions_page.dart';
 import 'package:emprendedor/presentation/pages/business_profile_page.dart';
@@ -22,7 +25,7 @@ class _MainAppShellState extends State<MainAppShell> {
   final List<Widget> _pages = [
     const HomePage(),
     const ProductListPage(),
-    const OrderListPage(), // <-- reemplazo correcto
+    const OrderListPage(),
     const StatisticsPage(),
     const PromotionsPage(),
     const BusinessProfilePage(),
@@ -67,10 +70,54 @@ class _MainAppShellState extends State<MainAppShell> {
     };
   }
 
+  Future<void> _logout() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      await GoogleSignIn().signOut();
+    } catch (_) {
+      await FirebaseAuth.instance.signOut();
+    }
+  }
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
+  }
+
+  List<Widget> _buildAppBarActions() {
+    final pageActions = _appBarActions[_selectedIndex] ?? [];
+
+    return [
+      ...pageActions,
+      IconButton(
+        icon: const Icon(Icons.logout),
+        tooltip: 'Cerrar sesión',
+        onPressed: () async {
+          final confirm = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Cerrar sesión'),
+              content: const Text('¿Deseas salir de tu cuenta?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Salir'),
+                ),
+              ],
+            ),
+          );
+
+          if (confirm == true) {
+            await _logout();
+          }
+        },
+      ),
+    ];
   }
 
   @override
@@ -78,7 +125,7 @@ class _MainAppShellState extends State<MainAppShell> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_pageTitles[_selectedIndex]),
-        actions: _appBarActions[_selectedIndex],
+        actions: _buildAppBarActions(),
       ),
       body: _pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
@@ -91,9 +138,18 @@ class _MainAppShellState extends State<MainAppShell> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
           BottomNavigationBarItem(icon: Icon(Icons.list), label: 'Productos'),
-          BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: 'Pedidos'),
-          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Estadísticas'),
-          BottomNavigationBarItem(icon: Icon(Icons.local_offer), label: 'Promociones'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.shopping_cart),
+            label: 'Pedidos',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart),
+            label: 'Estadísticas',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.local_offer),
+            label: 'Promociones',
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
         ],
       ),

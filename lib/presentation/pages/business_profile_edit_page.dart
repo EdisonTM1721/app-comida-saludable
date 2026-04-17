@@ -4,6 +4,7 @@ import 'package:emprendedor/presentation/controllers/profile_controller.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:emprendedor/data/models/business_profile_model.dart';
 import 'package:emprendedor/presentation/pages/main_app_shell.dart';
 
@@ -15,7 +16,8 @@ class BusinessProfileEditPage extends StatefulWidget {
   const BusinessProfileEditPage({super.key});
 
   @override
-  State<BusinessProfileEditPage> createState() => _BusinessProfileEditPageState();
+  State<BusinessProfileEditPage> createState() =>
+      _BusinessProfileEditPageState();
 }
 
 // Estado del widget
@@ -31,7 +33,6 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
   File? _selectedImageFile;
   bool _isSaving = false;
 
-  // Inicialización de controladores en initState
   @override
   void initState() {
     super.initState();
@@ -40,9 +41,11 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
     _addressController = TextEditingController();
     _openingHoursController = TextEditingController();
 
-    // Usar addPostFrameCallback para inicializar controladores de forma segura
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final profileController = Provider.of<ProfileController>(context, listen: false);
+      final profileController = Provider.of<ProfileController>(
+        context,
+        listen: false,
+      );
       if (profileController.businessProfile != null) {
         final profile = profileController.businessProfile!;
         _nameController.text = profile.name;
@@ -53,7 +56,6 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
     });
   }
 
-  // Limpieza de controladores en dispose
   @override
   void dispose() {
     _nameController.dispose();
@@ -63,7 +65,15 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
     super.dispose();
   }
 
-  // Muestra una notificación personalizada
+  Future<void> _logout() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      await GoogleSignIn().signOut();
+    } catch (_) {
+      await FirebaseAuth.instance.signOut();
+    }
+  }
+
   Future<void> _showCustomNotification({
     required BuildContext context,
     required String message,
@@ -72,10 +82,10 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
   }) async {
     if (!mounted) return;
 
-    // Colores y iconos según el tipo de notificación
     IconData iconData;
     Color backgroundColor;
     Color iconColor = Colors.white;
+
     switch (type) {
       case NotificationType.success:
         iconData = Icons.check_circle_outline;
@@ -95,14 +105,18 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
         break;
     }
 
-    // Muestra la notificación
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
             Icon(iconData, color: iconColor),
             const SizedBox(width: 8),
-            Expanded(child: Text(message, style: const TextStyle(color: Colors.white))),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
           ],
         ),
         backgroundColor: backgroundColor,
@@ -111,10 +125,13 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
     );
   }
 
-  // Abre la galería para seleccionar una imagen
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+    );
+
     if (pickedFile != null) {
       setState(() {
         _selectedImageFile = File(pickedFile.path);
@@ -122,18 +139,24 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
     }
   }
 
-  // Guarda los cambios del perfil
   Future<void> _saveProfile() async {
     if (!mounted) return;
+
     final currentContext = context;
+
     if (_formKey.currentState?.validate() != true) {
       return;
     }
+
     setState(() => _isSaving = true);
 
-    final profileController = Provider.of<ProfileController>(currentContext, listen: false);
+    final profileController = Provider.of<ProfileController>(
+      currentContext,
+      listen: false,
+    );
     final user = _auth.currentUser;
-    BusinessProfileModel? currentProfile = profileController.businessProfile;
+    final BusinessProfileModel? currentProfile =
+        profileController.businessProfile;
 
     if (user == null) {
       if (mounted) {
@@ -148,58 +171,90 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
       return;
     }
 
-    // Actualiza los datos del perfil
-    final profileDataToSave = (currentProfile ?? BusinessProfileModel(userId: user.uid, name: ''))
+    final profileDataToSave =
+    (currentProfile ?? BusinessProfileModel(userId: user.uid, name: ''))
         .copyWith(
       name: _nameController.text.trim(),
-      description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
-      address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
-      openingHours: _openingHoursController.text.trim().isEmpty ? null : _openingHoursController.text.trim(),
+      description: _descriptionController.text.trim().isEmpty
+          ? null
+          : _descriptionController.text.trim(),
+      address: _addressController.text.trim().isEmpty
+          ? null
+          : _addressController.text.trim(),
+      openingHours: _openingHoursController.text.trim().isEmpty
+          ? null
+          : _openingHoursController.text.trim(),
     );
 
-    bool success = await profileController.saveProfile(
+    final bool success = await profileController.saveProfile(
       profileDataToSave,
       imageFile: _selectedImageFile,
     );
+
     if (!mounted) return;
 
     if (success) {
-      // ⭐ CORRECCIÓN: Navegación sin usar `pop` para asegurar un flujo limpio
-      // y evitar la reconstrucción del widget que podría causar el error de tipo.
       Navigator.of(currentContext).pushReplacement(
         MaterialPageRoute(builder: (context) => const MainAppShell()),
       );
     } else {
       _showCustomNotification(
         context: currentContext,
-        message: 'Error al actualizar el perfil: ${profileController.errorMessage ?? "Intente de nuevo."}',
+        message:
+        'Error al actualizar el perfil: ${profileController.errorMessage ?? "Intente de nuevo."}',
         type: NotificationType.error,
         duration: const Duration(seconds: 4),
       );
     }
+
     if (mounted) {
       setState(() => _isSaving = false);
     }
   }
 
-  // Construye el widget
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Editar Perfil de Negocio'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Cerrar sesión',
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Cerrar sesión'),
+                  content: const Text('¿Deseas salir de tu cuenta?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('Cancelar'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: const Text('Salir'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm == true) {
+                await _logout();
+              }
+            },
+          ),
+        ],
       ),
       body: Consumer<ProfileController>(
         builder: (context, profileController, child) {
-
-          // Muestra un indicador de carga si el controlador está cargando
           if (profileController.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
           final profile = profileController.businessProfile;
 
-          // Muestra un mensaje de error si hay uno
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Form(
@@ -218,20 +273,34 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
                             backgroundColor: Colors.grey[200],
                             backgroundImage: _selectedImageFile != null
                                 ? FileImage(_selectedImageFile!)
-                                : (profile?.profileImageUrl != null && profile!.profileImageUrl!.isNotEmpty
+                                : (profile?.profileImageUrl != null &&
+                                profile!.profileImageUrl!.isNotEmpty
                                 ? NetworkImage(profile.profileImageUrl!)
                                 : null) as ImageProvider?,
-                            child: (profile?.profileImageUrl == null || profile!.profileImageUrl!.isEmpty) && _selectedImageFile == null
-                                ? Icon(Icons.business_outlined, size: 80, color: Colors.grey[600])
+                            child:
+                            (profile?.profileImageUrl == null ||
+                                profile!.profileImageUrl!.isEmpty) &&
+                                _selectedImageFile == null
+                                ? Icon(
+                              Icons.business_outlined,
+                              size: 80,
+                              color: Colors.grey[600],
+                            )
                                 : null,
                           ),
                           Positioned(
                             bottom: 0,
                             right: 0,
                             child: CircleAvatar(
-                              backgroundColor: Theme.of(context).primaryColorLight.withAlpha(229),
+                              backgroundColor: Theme.of(
+                                context,
+                              ).primaryColorLight.withAlpha(229),
                               radius: 22,
-                              child: Icon(Icons.camera_alt_outlined, color: Theme.of(context).primaryColorDark, size: 24),
+                              child: Icon(
+                                Icons.camera_alt_outlined,
+                                color: Theme.of(context).primaryColorDark,
+                                size: 24,
+                              ),
                             ),
                           ),
                         ],
@@ -241,36 +310,65 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
                   const SizedBox(height: 24),
                   TextFormField(
                     controller: _nameController,
-                    decoration: const InputDecoration(labelText: 'Nombre del Negocio', prefixIcon: Icon(Icons.store_outlined)),
-                    validator: (value) => (value == null || value.trim().isEmpty) ? 'Ingresa el nombre de tu negocio' : null,
+                    decoration: const InputDecoration(
+                      labelText: 'Nombre del Negocio',
+                      prefixIcon: Icon(Icons.store_outlined),
+                    ),
+                    validator: (value) =>
+                    (value == null || value.trim().isEmpty)
+                        ? 'Ingresa el nombre de tu negocio'
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _descriptionController,
-                    decoration: const InputDecoration(labelText: 'Descripción', prefixIcon: Icon(Icons.description_outlined)),
+                    decoration: const InputDecoration(
+                      labelText: 'Descripción',
+                      prefixIcon: Icon(Icons.description_outlined),
+                    ),
                     maxLines: 3,
                     minLines: 1,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _addressController,
-                    decoration: const InputDecoration(labelText: 'Dirección', prefixIcon: Icon(Icons.location_on_outlined)),
+                    decoration: const InputDecoration(
+                      labelText: 'Dirección',
+                      prefixIcon: Icon(Icons.location_on_outlined),
+                    ),
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _openingHoursController,
-                    decoration: const InputDecoration(labelText: 'Horarios de Atención', prefixIcon: Icon(Icons.access_time_outlined)),
+                    decoration: const InputDecoration(
+                      labelText: 'Horarios de Atención',
+                      prefixIcon: Icon(Icons.access_time_outlined),
+                    ),
                   ),
                   const SizedBox(height: 30),
                   ElevatedButton.icon(
                     icon: _isSaving
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                         : const Icon(Icons.save_alt_outlined),
-                    label: Text(_isSaving ? 'Guardando Cambios...' : 'Guardar Cambios del Perfil'),
-                    onPressed: _isSaving ? null : () => _saveProfile(),
+                    label: Text(
+                      _isSaving
+                          ? 'Guardando Cambios...'
+                          : 'Guardar Cambios del Perfil',
+                    ),
+                    onPressed: _isSaving ? null : _saveProfile,
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      textStyle: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 20),
