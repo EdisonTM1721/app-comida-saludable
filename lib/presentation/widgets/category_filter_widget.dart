@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:emprendedor/presentation/controllers/product_controller.dart';
+import 'package:emprendedor/presentation/controllers/entrepreneur/product_controller.dart';
 
 // Nueva clase para el widget de filtro de categorías
 class CategoryFilterWidget extends StatelessWidget {

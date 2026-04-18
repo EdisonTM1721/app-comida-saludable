@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:emprendedor/data/models/user_model.dart';
 
-// Enumeración para representar el estado de un pedido
 enum OrderStatus {
   pending,
   preparing,
@@ -10,7 +9,6 @@ enum OrderStatus {
   cancelled,
 }
 
-// Ayudante para convertir OrderStatus a String y viceversa
 String orderStatusToString(OrderStatus status) {
   switch (status) {
     case OrderStatus.pending:
@@ -26,7 +24,6 @@ String orderStatusToString(OrderStatus status) {
   }
 }
 
-// Ayudante para convertir String a OrderStatus
 OrderStatus stringToOrderStatus(String? statusStr) {
   switch (statusStr?.toLowerCase()) {
     case 'pending':
@@ -44,7 +41,6 @@ OrderStatus stringToOrderStatus(String? statusStr) {
   }
 }
 
-// Ayudante para obtener el display string para OrderStatus
 String getOrderStatusDisplayString(OrderStatus status) {
   switch (status) {
     case OrderStatus.pending:
@@ -60,7 +56,6 @@ String getOrderStatusDisplayString(OrderStatus status) {
   }
 }
 
-// Clase para representar un producto en un pedido
 class OrderItem {
   final String productId;
   final String productName;
@@ -68,7 +63,6 @@ class OrderItem {
   final double priceAtPurchase;
   final String? imageUrl;
 
-  // Constructor de la clase
   OrderItem({
     required this.productId,
     required this.productName,
@@ -77,8 +71,7 @@ class OrderItem {
     this.imageUrl,
   });
 
-  // Factory constructor para crear una instancia desde un mapa
-    factory OrderItem.fromMap(Map<String, dynamic> map) {
+  factory OrderItem.fromMap(Map<String, dynamic> map) {
     return OrderItem(
       productId: map['productId'] ?? '',
       productName: map['productName'] ?? '',
@@ -88,8 +81,7 @@ class OrderItem {
     );
   }
 
-  // Metodo para convertir la instancia en un mapa
-    Map<String, dynamic> toMap() {
+  Map<String, dynamic> toMap() {
     return {
       'productId': productId,
       'productName': productName,
@@ -100,14 +92,18 @@ class OrderItem {
   }
 }
 
-// Clase para representar un pedido
 class OrderModel {
   final String? id;
+  final int? orderNumber;
   final String userId;
+  final String businessUserId;
   final List<OrderItem> items;
   final double totalPrice;
   final OrderStatus status;
   final String shippingAddress;
+  final String paymentMethod;
+  final double? latitude;
+  final double? longitude;
   final UserModel customerInfo;
   final Timestamp createdAt;
   final Timestamp? updatedAt;
@@ -115,14 +111,18 @@ class OrderModel {
   final String? couponId;
   final bool? isFeaturedProduct;
 
-  // Constructor de la clase
-    OrderModel({
+  OrderModel({
     this.id,
+    this.orderNumber,
     required this.userId,
+    required this.businessUserId,
     required this.items,
     required this.totalPrice,
     required this.status,
     required this.shippingAddress,
+    required this.paymentMethod,
+    this.latitude,
+    this.longitude,
     required this.customerInfo,
     required this.createdAt,
     this.updatedAt,
@@ -131,19 +131,30 @@ class OrderModel {
     this.isFeaturedProduct,
   });
 
-  // Factory constructor para crear una instancia desde un mapa
-    factory OrderModel.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+  factory OrderModel.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+
     return OrderModel(
       id: doc.id,
+      orderNumber: (data['orderNumber'] as num?)?.toInt(),
       userId: data['userId'] ?? '',
+      businessUserId: data['businessUserId'] ?? '',
       items: (data['items'] as List<dynamic>?)
-          ?.map((itemMap) => OrderItem.fromMap(itemMap as Map<String, dynamic>))
-          .toList() ?? [],
+          ?.map(
+            (itemMap) =>
+            OrderItem.fromMap(itemMap as Map<String, dynamic>),
+      )
+          .toList() ??
+          [],
       totalPrice: (data['totalPrice'] ?? 0.0).toDouble(),
       status: stringToOrderStatus(data['status']),
       shippingAddress: data['shippingAddress'] ?? 'N/A',
-      customerInfo: UserModel.fromEmbeddedData(data['customerInfo'] as Map<String, dynamic>? ?? {}),
+      paymentMethod: data['paymentMethod'] ?? 'No especificado',
+      latitude: (data['latitude'] as num?)?.toDouble(),
+      longitude: (data['longitude'] as num?)?.toDouble(),
+      customerInfo: UserModel.fromEmbeddedData(
+        data['customerInfo'] as Map<String, dynamic>? ?? {},
+      ),
       createdAt: data['createdAt'] ?? Timestamp.now(),
       updatedAt: data['updatedAt'],
       deliveredAt: data['deliveredAt'],
@@ -152,14 +163,18 @@ class OrderModel {
     );
   }
 
-  // Metodo para convertir la instancia en un mapa
-    Map<String, dynamic> toFirestore() {
+  Map<String, dynamic> toFirestore() {
     return {
+      'orderNumber': orderNumber,
       'userId': userId,
+      'businessUserId': businessUserId,
       'items': items.map((item) => item.toMap()).toList(),
       'totalPrice': totalPrice,
       'status': orderStatusToString(status),
       'shippingAddress': shippingAddress,
+      'paymentMethod': paymentMethod,
+      'latitude': latitude,
+      'longitude': longitude,
       'customerInfo': customerInfo.toEmbeddedData(),
       'createdAt': createdAt,
       'updatedAt': updatedAt,

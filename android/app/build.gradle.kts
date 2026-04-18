@@ -24,18 +24,17 @@ android {
 
     buildTypes {
         release {
-            // Configuración de firma de lanzamiento (opcional si solo estás probando en debug)
+            // Configuración de firma de lanzamiento
         }
     }
 }
 
-// Configuración de Kotlin para usar JVM 17
 kotlin {
     jvmToolchain(17)
 }
-// Dependencias de la aplicación
+
 dependencies {
-    implementation(platform("com.google.firebase:firebase-bom:34.2.0"))
+    implementation(platform("com.google.firebase:firebase-bom:34.12.0"))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-appcheck-playintegrity")
