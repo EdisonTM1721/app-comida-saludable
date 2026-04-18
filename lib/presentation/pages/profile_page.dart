@@ -1,36 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:emprendedor/presentation/controllers/profile_controller.dart';
 import 'package:emprendedor/presentation/pages/business_profile_edit_page.dart';
 import 'dart:convert';
 import 'package:logging/logging.dart';
 
-// Crear una instancia de Logger para esta página
 final Logger _logger = Logger('ProfilePage');
 
-// Página de perfil
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
-  // Construye el widget
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
-// Estado del widget
 class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _logger.info('initState: Llamando a fetchBusinessProfile');
-        Provider.of<ProfileController>(context, listen: false).fetchBusinessProfile();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+
+      final user = FirebaseAuth.instance.currentUser;
+      final controller = Provider.of<ProfileController>(
+        context,
+        listen: false,
+      );
+
+      if (user != null) {
+        _logger.info('initState: seteando userId y cargando perfil');
+        await controller.setUserId(user.uid);
+      } else {
+        _logger.warning('initState: no hay usuario autenticado');
       }
     });
   }
 
-  // Formatear los métodos de pago
   String _formatPaymentMethods(String? jsonString) {
     if (jsonString == null || jsonString.isEmpty || jsonString.trim() == "[]") {
       return 'No se han establecido métodos de pago';
@@ -44,7 +50,9 @@ class _ProfilePageState extends State<ProfilePage> {
             String name = method['name'] as String;
             final details = (method['details'] as Map<String, dynamic>?) ?? {};
 
-            if (name == 'PayPal' && details.containsKey('paypalEmail') && (details['paypalEmail'] as String?)?.isNotEmpty == true) {
+            if (name == 'PayPal' &&
+                details.containsKey('paypalEmail') &&
+                (details['paypalEmail'] as String?)?.isNotEmpty == true) {
               return "$name (${details['paypalEmail']})";
             }
             return name;
@@ -58,26 +66,30 @@ class _ProfilePageState extends State<ProfilePage> {
         return methodNames.join(', ');
       }
     } catch (e, stackTrace) {
-      _logger.warning('Error al decodificar métodos de pago: $jsonString', e, stackTrace);
+      _logger.warning(
+        'Error al decodificar métodos de pago: $jsonString',
+        e,
+        stackTrace,
+      );
       return 'Error al cargar métodos de pago';
     }
     return jsonString;
   }
 
-  // Construye el widget
   @override
   Widget build(BuildContext context) {
     return Consumer<ProfileController>(
       builder: (context, controller, child) {
-        _logger.finer('Build: Controller BusinessProfile: ${controller.businessProfile?.name}, isLoading: ${controller.isLoading}, error: ${controller.errorMessage}');
+        _logger.finer(
+          'Build: profile=${controller.businessProfile?.name}, isLoading=${controller.isLoading}, error=${controller.errorMessage}',
+        );
 
-        // Manejar el estado de carga
         if (controller.isLoading) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        // Manejar el estado de error
-        if (controller.errorMessage != null) {
+        if (controller.errorMessage != null &&
+            controller.businessProfile == null) {
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
@@ -89,12 +101,18 @@ class _ProfilePageState extends State<ProfilePage> {
                   Text(
                     'Error: ${controller.errorMessage}',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: () {
-                      controller.fetchBusinessProfile();
+                    onPressed: () async {
+                      final user = FirebaseAuth.instance.currentUser;
+                      if (user != null) {
+                        await controller.setUserId(user.uid);
+                      }
                     },
                     child: const Text('Reintentar'),
                   ),
@@ -105,39 +123,60 @@ class _ProfilePageState extends State<ProfilePage> {
         }
 
         final profile = controller.businessProfile;
+        final user = FirebaseAuth.instance.currentUser;
+        final userId = profile?.userId ?? user?.uid;
 
         if (profile == null) {
-          // Si el perfil no existe, muestra un mensaje y un botón para crearlo
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.person_add_alt_1_outlined, size: 80, color: Colors.grey),
+                  const Icon(
+                    Icons.person_add_alt_1_outlined,
+                    size: 80,
+                    color: Colors.grey,
+                  ),
                   const SizedBox(height: 20),
                   const Text(
                     '¡Aún no tienes un perfil de negocio! Haz clic en el botón para crear uno y empezar a vender.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   const SizedBox(height: 30),
                   ElevatedButton.icon(
-                    onPressed: () async {
-                      _logger.info('Redirigiendo a BusinessProfileEditPage para crear un nuevo perfil.');
+                    onPressed: userId == null
+                        ? null
+                        : () async {
+                      _logger.info(
+                        'Redirigiendo a BusinessProfileEditPage para crear un nuevo perfil.',
+                      );
                       final result = await Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const BusinessProfileEditPage()),
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              BusinessProfileEditPage(userId: userId),
+                        ),
                       );
-                      if (result == true) {
-                        _logger.info('Perfil creado, recargando datos.');
-                        await controller.fetchBusinessProfile();
+                      if (result == true || mounted) {
+                        final currentUser =
+                            FirebaseAuth.instance.currentUser;
+                        if (currentUser != null) {
+                          await controller.setUserId(currentUser.uid);
+                        }
                       }
                     },
                     icon: const Icon(Icons.add_circle_outline),
                     label: const Text('Crear Perfil'),
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
                     ),
                   ),
                 ],
@@ -146,33 +185,49 @@ class _ProfilePageState extends State<ProfilePage> {
           );
         }
 
-        // Si el perfil existe, muestra sus datos
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
+        return RefreshIndicator(
+          onRefresh: () async {
+            final currentUser = FirebaseAuth.instance.currentUser;
+            if (currentUser != null) {
+              await controller.setUserId(currentUser.uid);
+            }
+          },
+          child: ListView(
+            padding: const EdgeInsets.all(16.0),
             children: [
               CircleAvatar(
                 radius: 70,
                 backgroundColor: Colors.grey[300],
-                backgroundImage: profile.profileImageUrl != null && profile.profileImageUrl!.isNotEmpty
+                backgroundImage: profile.profileImageUrl != null &&
+                    profile.profileImageUrl!.isNotEmpty
                     ? NetworkImage(profile.profileImageUrl!)
                     : null,
-                child: (profile.profileImageUrl == null || profile.profileImageUrl!.isEmpty)
-                    ? Icon(Icons.business_center_outlined, size: 70, color: Colors.grey[600])
+                child: (profile.profileImageUrl == null ||
+                    profile.profileImageUrl!.isEmpty)
+                    ? Icon(
+                  Icons.business_center_outlined,
+                  size: 70,
+                  color: Colors.grey[600],
+                )
                     : null,
               ),
               const SizedBox(height: 20),
               Text(
                 profile.name.isEmpty ? 'Mi Negocio' : profile.name,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 10),
               Text(
-                profile.description?.isNotEmpty == true ? profile.description! : 'Aún no has agregado una descripción.',
+                profile.description?.isNotEmpty == true
+                    ? profile.description!
+                    : 'Aún no has agregado una descripción.',
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey[700]),
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: Colors.grey[700],
+                ),
               ),
               const SizedBox(height: 24),
               const Divider(thickness: 0.8),
@@ -181,13 +236,17 @@ class _ProfilePageState extends State<ProfilePage> {
                 context: context,
                 icon: Icons.location_on_outlined,
                 title: 'Dirección',
-                subtitle: profile.address?.isNotEmpty == true ? profile.address! : 'No se ha especificado la dirección',
+                subtitle: profile.address?.isNotEmpty == true
+                    ? profile.address!
+                    : 'No se ha especificado la dirección',
               ),
               _buildInfoTile(
                 context: context,
                 icon: Icons.access_time_outlined,
                 title: 'Horarios de Atención',
-                subtitle: profile.openingHours?.isNotEmpty == true ? profile.openingHours! : 'No se han establecido horarios',
+                subtitle: profile.openingHours?.isNotEmpty == true
+                    ? profile.openingHours!
+                    : 'No se han establecido horarios',
               ),
               _buildInfoTile(
                 context: context,
@@ -199,15 +258,22 @@ class _ProfilePageState extends State<ProfilePage> {
               ElevatedButton.icon(
                 icon: const Icon(Icons.edit_note_outlined),
                 label: const Text('Editar Perfil'),
-                onPressed: () async {
-                  _logger.info('Navegando a la página de edición de perfil.');
+                onPressed: userId == null
+                    ? null
+                    : () async {
+                  _logger.info('Navegando a la página de edición.');
                   final result = await Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const BusinessProfileEditPage()),
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          BusinessProfileEditPage(userId: userId),
+                    ),
                   );
-                  if (result == true) {
-                    _logger.info('Perfil guardado, recargando datos del perfil.');
-                    await controller.fetchBusinessProfile();
+                  if (result == true || mounted) {
+                    final currentUser = FirebaseAuth.instance.currentUser;
+                    if (currentUser != null) {
+                      await controller.setUserId(currentUser.uid);
+                    }
                   }
                 },
                 style: ElevatedButton.styleFrom(
@@ -221,7 +287,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // Construye un ListTile con información
   Widget _buildInfoTile({
     required BuildContext context,
     required IconData icon,
@@ -237,9 +302,22 @@ class _ProfilePageState extends State<ProfilePage> {
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       child: ListTile(
         leading: Icon(icon, color: Theme.of(context).primaryColor, size: 26),
-        title: Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitle, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.black54)),
-        contentPadding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 16.0),
+        title: Text(
+          title,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Colors.black54,
+          ),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 10.0,
+          horizontal: 16.0,
+        ),
       ),
     );
   }

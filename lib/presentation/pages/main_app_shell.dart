@@ -11,6 +11,7 @@ import 'package:emprendedor/presentation/pages/statistics_page.dart';
 import 'package:emprendedor/presentation/pages/promotions_page.dart';
 import 'package:emprendedor/presentation/pages/business_profile_page.dart';
 import 'package:emprendedor/presentation/pages/settings_page.dart';
+import 'package:emprendedor/presentation/pages/login_page.dart';
 
 class MainAppShell extends StatefulWidget {
   const MainAppShell({super.key});
@@ -21,15 +22,6 @@ class MainAppShell extends StatefulWidget {
 
 class _MainAppShellState extends State<MainAppShell> {
   int _selectedIndex = 0;
-
-  final List<Widget> _pages = [
-    const HomePage(),
-    const ProductListPage(),
-    const OrderListPage(),
-    const StatisticsPage(),
-    const PromotionsPage(),
-    const BusinessProfilePage(),
-  ];
 
   static const List<String> _pageTitles = [
     'Panel de Inicio',
@@ -77,12 +69,40 @@ class _MainAppShellState extends State<MainAppShell> {
     } catch (_) {
       await FirebaseAuth.instance.signOut();
     }
+
+    if (!mounted) return;
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const LoginPage()),
+          (route) => false,
+    );
   }
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
+  }
+
+  Widget _buildCurrentPage() {
+    switch (_selectedIndex) {
+      case 0:
+        return const HomePage();
+      case 1:
+        return const ProductListPage();
+      case 2:
+        return const OrderListPage();
+      case 3:
+        return const StatisticsPage();
+      case 4:
+        return const PromotionsPage();
+      case 5:
+        return const BusinessProfilePage(
+          key: ValueKey('business_profile_page'),
+        );
+      default:
+        return const HomePage();
+    }
   }
 
   List<Widget> _buildAppBarActions() {
@@ -127,7 +147,7 @@ class _MainAppShellState extends State<MainAppShell> {
         title: Text(_pageTitles[_selectedIndex]),
         actions: _buildAppBarActions(),
       ),
-      body: _pages[_selectedIndex],
+      body: _buildCurrentPage(),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,

@@ -2,12 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:logging/logging.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import 'package:emprendedor/presentation/pages/phone_auth_page.dart';
 import 'package:emprendedor/presentation/pages/login_page.dart';
 import 'package:emprendedor/presentation/pages/auth_wrapper.dart';
+
 import 'package:emprendedor/data/models/business_profile_model.dart';
+import 'package:emprendedor/data/models/client_profile_model.dart';
+import 'package:emprendedor/data/models/nutritionist_profile_model.dart';
+
 import 'package:emprendedor/data/repositories/business_profile_repository.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:emprendedor/data/repositories/client_profile_repository.dart';
+import 'package:emprendedor/data/repositories/nutritionist_profile_repository.dart';
 
 final Logger logger = Logger('RegisterPage');
 
@@ -24,6 +31,10 @@ class _RegisterPageState extends State<RegisterPage> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+
+  final _businessRepo = BusinessProfileRepository();
+  final _clientRepo = ClientProfileRepository();
+  final _nutritionistRepo = NutritionistProfileRepository();
 
   String? _errorMessage;
   bool _isLoading = false;
@@ -69,20 +80,48 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
+  Future<void> _saveProfileByRole({
+    required String userId,
+    String? name,
+  }) async {
+    final defaultName = name ?? _defaultNameByRole(_selectedRole);
+
+    switch (_selectedRole) {
+      case 'cliente':
+        final profile = ClientProfileModel(
+          userId: userId,
+          name: defaultName,
+          role: 'cliente',
+        );
+        await _clientRepo.createClientProfile(profile);
+        break;
+
+      case 'nutricionista':
+        final profile = NutritionistProfileModel(
+          userId: userId,
+          name: defaultName,
+          role: 'nutricionista',
+        );
+        await _nutritionistRepo.createNutritionistProfile(profile);
+        break;
+
+      case 'emprendedor':
+      default:
+        final profile = BusinessProfileModel(
+          userId: userId,
+          name: defaultName,
+          role: 'emprendedor',
+        );
+        await _businessRepo.createBusinessProfile(profile);
+        break;
+    }
+  }
+
   Future<void> _goToAuthWrapper() async {
     if (!mounted) return;
 
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => const AuthWrapper()),
-          (route) => false,
-    );
-  }
-
-  Future<void> _goToLogin() async {
-    if (!mounted) return;
-
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => const LoginPage()),
           (route) => false,
     );
   }
@@ -111,16 +150,9 @@ class _RegisterPageState extends State<RegisterPage> {
         );
       }
 
-      final newProfile = BusinessProfileModel(
-        userId: user.uid,
-        name: _defaultNameByRole(_selectedRole),
-        role: _selectedRole,
-      );
-
-      await BusinessProfileRepository().createBusinessProfile(newProfile);
+      await _saveProfileByRole(userId: user.uid);
 
       _showSnackBar('¡Registro exitoso!');
-
       await _goToAuthWrapper();
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
@@ -197,13 +229,10 @@ class _RegisterPageState extends State<RegisterPage> {
       if (!mounted) return;
 
       if (userCredential.additionalUserInfo?.isNewUser == true) {
-        final newProfile = BusinessProfileModel(
+        await _saveProfileByRole(
           userId: userCredential.user!.uid,
           name: googleUser.displayName ?? _defaultNameByRole(_selectedRole),
-          role: _selectedRole,
         );
-
-        await BusinessProfileRepository().createBusinessProfile(newProfile);
 
         _showSnackBar('¡Registro exitoso con Google!');
       } else {

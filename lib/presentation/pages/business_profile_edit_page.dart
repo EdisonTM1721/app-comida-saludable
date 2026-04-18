@@ -8,19 +8,21 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:emprendedor/data/models/business_profile_model.dart';
 import 'package:emprendedor/presentation/pages/main_app_shell.dart';
 
-// Enum para los tipos de notificaciones
 enum NotificationType { success, error, warning, info }
 
-// Clase para controlar la edición del perfil de negocio
 class BusinessProfileEditPage extends StatefulWidget {
-  const BusinessProfileEditPage({super.key});
+  final String userId;
+
+  const BusinessProfileEditPage({
+    super.key,
+    required this.userId,
+  });
 
   @override
   State<BusinessProfileEditPage> createState() =>
       _BusinessProfileEditPageState();
 }
 
-// Estado del widget
 class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
   final _auth = FirebaseAuth.instance;
   final _formKey = GlobalKey<FormState>();
@@ -154,15 +156,17 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
       currentContext,
       listen: false,
     );
-    final user = _auth.currentUser;
+
     final BusinessProfileModel? currentProfile =
         profileController.businessProfile;
 
-    if (user == null) {
+    final String resolvedUserId = widget.userId;
+
+    if (resolvedUserId.isEmpty) {
       if (mounted) {
         _showCustomNotification(
           context: currentContext,
-          message: 'Error: Usuario no autenticado.',
+          message: 'Error: No se encontró el ID del usuario.',
           type: NotificationType.error,
           duration: const Duration(seconds: 4),
         );
@@ -172,9 +176,16 @@ class _BusinessProfileEditPageState extends State<BusinessProfileEditPage> {
     }
 
     final profileDataToSave =
-    (currentProfile ?? BusinessProfileModel(userId: user.uid, name: ''))
+    (currentProfile ??
+        BusinessProfileModel(
+          userId: resolvedUserId,
+          name: '',
+          role: 'emprendedor',
+        ))
         .copyWith(
+      userId: resolvedUserId,
       name: _nameController.text.trim(),
+      role: 'emprendedor',
       description: _descriptionController.text.trim().isEmpty
           ? null
           : _descriptionController.text.trim(),

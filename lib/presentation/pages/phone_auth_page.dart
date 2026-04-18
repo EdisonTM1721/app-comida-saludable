@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import 'package:emprendedor/data/models/business_profile_model.dart';
+import 'package:emprendedor/data/models/client_profile_model.dart';
+import 'package:emprendedor/data/models/nutritionist_profile_model.dart';
+
 import 'package:emprendedor/data/repositories/business_profile_repository.dart';
+import 'package:emprendedor/data/repositories/client_profile_repository.dart';
+import 'package:emprendedor/data/repositories/nutritionist_profile_repository.dart';
+
 import 'package:emprendedor/presentation/pages/login_page.dart';
 import 'package:emprendedor/presentation/pages/auth_wrapper.dart';
 
@@ -23,6 +30,10 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
   final _auth = FirebaseAuth.instance;
   final _phoneController = TextEditingController();
   final _otpController = TextEditingController();
+
+  final _businessRepo = BusinessProfileRepository();
+  final _clientRepo = ClientProfileRepository();
+  final _nutritionistRepo = NutritionistProfileRepository();
 
   String _verificationId = '';
   String? _errorMessage;
@@ -83,6 +94,43 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
         return 'Nuevo Nutricionista';
       default:
         return 'Nuevo Emprendedor';
+    }
+  }
+
+  Future<void> _saveProfileByRole({
+    required String userId,
+    String? name,
+  }) async {
+    final defaultName = name ?? _defaultNameByRole(widget.selectedRole);
+
+    switch (widget.selectedRole) {
+      case 'cliente':
+        final profile = ClientProfileModel(
+          userId: userId,
+          name: defaultName,
+          role: 'cliente',
+        );
+        await _clientRepo.createClientProfile(profile);
+        break;
+
+      case 'nutricionista':
+        final profile = NutritionistProfileModel(
+          userId: userId,
+          name: defaultName,
+          role: 'nutricionista',
+        );
+        await _nutritionistRepo.createNutritionistProfile(profile);
+        break;
+
+      case 'emprendedor':
+      default:
+        final profile = BusinessProfileModel(
+          userId: userId,
+          name: defaultName,
+          role: 'emprendedor',
+        );
+        await _businessRepo.createBusinessProfile(profile);
+        break;
     }
   }
 
@@ -252,14 +300,7 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
       if (!mounted) return;
 
       if (userCredential.additionalUserInfo?.isNewUser == true) {
-        final newProfile = BusinessProfileModel(
-          userId: userCredential.user!.uid,
-          name: _defaultNameByRole(widget.selectedRole),
-          role: widget.selectedRole,
-        );
-
-        await BusinessProfileRepository().createBusinessProfile(newProfile);
-
+        await _saveProfileByRole(userId: userCredential.user!.uid);
         _showSnackBar('¡Registro exitoso con teléfono!');
       } else {
         _showSnackBar('¡Inicio de sesión exitoso!');

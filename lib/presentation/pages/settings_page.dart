@@ -9,19 +9,15 @@ import 'package:emprendedor/presentation/controllers/profile_controller.dart';
 import 'package:emprendedor/presentation/controllers/social_media_controller.dart';
 import 'package:emprendedor/presentation/controllers/payment_method_controller.dart';
 
-// Configuración de usuario
 final Logger logger = Logger('SettingsPage');
 
-// Página de configuración
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
-  // Cierra la sesión del usuario
   void _logout(BuildContext context) async {
     try {
       await FirebaseAuth.instance.signOut();
       if (context.mounted) {
-
         Navigator.of(context).pop();
       }
     } catch (e, stackTrace) {
@@ -34,15 +30,12 @@ class SettingsPage extends StatelessWidget {
     }
   }
 
-  // Construye el widget
   @override
   Widget build(BuildContext context) {
-
     final user = FirebaseAuth.instance.currentUser;
     final userId = user?.uid;
 
     if (userId == null) {
-
       return const Scaffold(
         body: Center(
           child: Text('Usuario no autenticado.'),
@@ -60,10 +53,17 @@ class SettingsPage extends StatelessWidget {
             leading: const Icon(Icons.edit, color: Colors.teal),
             title: const Text('Editar Perfil'),
             onTap: () {
+              Provider.of<ProfileController>(
+                context,
+                listen: false,
+              ).setUserId(userId);
 
-              Provider.of<ProfileController>(context, listen: false).setUserId(userId);
               Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const BusinessProfileEditPage()),
+                MaterialPageRoute(
+                  builder: (context) => BusinessProfileEditPage(
+                    userId: userId,
+                  ),
+                ),
               );
             },
           ),
@@ -72,10 +72,15 @@ class SettingsPage extends StatelessWidget {
             leading: const Icon(Icons.public, color: Colors.teal),
             title: const Text('Redes Sociales'),
             onTap: () {
+              Provider.of<SocialMediaController>(
+                context,
+                listen: false,
+              ).setUserId(userId);
 
-              Provider.of<SocialMediaController>(context, listen: false).setUserId(userId);
               Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const SocialMediaPage()),
+                MaterialPageRoute(
+                  builder: (context) => const SocialMediaPage(),
+                ),
               );
             },
           ),
@@ -84,10 +89,15 @@ class SettingsPage extends StatelessWidget {
             leading: const Icon(Icons.credit_card, color: Colors.teal),
             title: const Text('Métodos de Pago'),
             onTap: () {
+              Provider.of<PaymentMethodController>(
+                context,
+                listen: false,
+              ).setUserId(userId);
 
-              Provider.of<PaymentMethodController>(context, listen: false).setUserId(userId);
               Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const PaymentMethodsPage()),
+                MaterialPageRoute(
+                  builder: (context) => const PaymentMethodsPage(),
+                ),
               );
             },
           ),

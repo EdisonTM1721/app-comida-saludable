@@ -1,20 +1,18 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:logging/logging.dart';
 import 'package:emprendedor/data/repositories/payment_method_repository.dart';
 import 'package:emprendedor/data/models/payment_method_model.dart';
 
-
-// Clase para controlar los métodos de pago
 class PaymentMethodController extends ChangeNotifier {
   final Logger _logger = Logger('PaymentMethodController');
   final PaymentMethodRepository _repository = PaymentMethodRepository();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Propiedades privadas
   List<PaymentMethodModel> _paymentMethods = [];
   List<PaymentMethodModel> get paymentMethods => _paymentMethods;
 
-  // Propiedades públicas
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
@@ -24,62 +22,89 @@ class PaymentMethodController extends ChangeNotifier {
   StreamSubscription<List<PaymentMethodModel>>? _paymentMethodsSubscription;
   String? _userId;
 
-  // El método ahora es asincrónico y devuelve un Future<void> ⭐
+  String? get userId => _userId;
+
   Future<void> setUserId(String? userId) async {
-    if (_userId == userId) {
+    if (_userId == userId) return;
+
+    _userId = userId;
+
+    if (_userId == null) {
+      await _paymentMethodsSubscription?.cancel();
+      _paymentMethodsSubscription = null;
+      _paymentMethods = [];
+      _errorMessage = null;
+      _isLoading = false;
+      notifyListeners();
       return;
     }
-    _userId = userId;
-    if (userId != null) {
-      await fetchPaymentMethods();
-    }
+
+    await fetchPaymentMethods();
   }
 
-  // Método de gestión de ciclo de vida
   @override
   void dispose() {
     _paymentMethodsSubscription?.cancel();
     super.dispose();
   }
 
-  // Métodos privados
   Future<void> fetchPaymentMethods() async {
-    if (_userId == null) {
+    final resolvedUserId = _userId ?? _auth.currentUser?.uid;
+
+    if (resolvedUserId == null) {
       _setError('Usuario no autenticado.');
       return;
     }
 
-    // Cancelar la suscripción anterior si existe
+    _userId = resolvedUserId;
+
     _setLoading(true);
     _clearError();
     await _paymentMethodsSubscription?.cancel();
 
     try {
-      _paymentMethodsSubscription = _repository.getPaymentMethods(_userId!).listen((data) {
-        _paymentMethods = data;
-        _setLoading(false);
-      }, onError: (error, stackTrace) {
-        _logger.severe("Error al cargar métodos de pago", error, stackTrace);
-        _setError("Error al cargar métodos de pago: $error");
-        _setLoading(false);
-      });
+      _paymentMethodsSubscription =
+          _repository.getPaymentMethods(resolvedUserId).listen(
+                (data) {
+              _paymentMethods = data;
+              _setLoading(false);
+            },
+            onError: (error, stackTrace) {
+              _logger.severe(
+                "Error al cargar métodos de pago",
+                error,
+                stackTrace,
+              );
+              _setError("Error al cargar métodos de pago: $error");
+              _setLoading(false);
+            },
+          );
     } catch (e, stackTrace) {
-      _logger.severe("Excepción al iniciar la carga de métodos de pago", e, stackTrace);
+      _logger.severe(
+        "Excepción al iniciar la carga de métodos de pago",
+        e,
+        stackTrace,
+      );
       _setError("Error al cargar métodos de pago: $e");
       _setLoading(false);
     }
   }
 
-  // Métodos públicos
   Future<void> addPaymentMethod(PaymentMethodModel paymentMethod) async {
-    if (_userId == null) {
+    final resolvedUserId = _userId ?? _auth.currentUser?.uid;
+
+    if (resolvedUserId == null) {
       _setError('Usuario no autenticado.');
       return;
     }
+
+    _userId = resolvedUserId;
     _setLoading(true);
     _clearError();
+
     try {
-      await _repository.addPaymentMethod(_userId!, paymentMethod);
+      final paymentMethodWithUser = paymentMethod.copyWith(userId: resolvedUserId);
+      await _repository.addPaymentMethod(resolvedUserId, paymentMethodWithUser);
       _logger.info("Método de pago agregado.");
     } catch (e, stackTrace) {
       _logger.severe("Error al agregar método de pago", e, stackTrace);
@@ -89,16 +114,21 @@ class PaymentMethodController extends ChangeNotifier {
     }
   }
 
-  // Actualizar método de pago
   Future<void> updatePaymentMethod(PaymentMethodModel paymentMethod) async {
-    if (_userId == null) {
+    final resolvedUserId = _userId ?? _auth.currentUser?.uid;
+
+    if (resolvedUserId == null) {
       _setError('Usuario no autenticado.');
       return;
     }
+
+    _userId = resolvedUserId;
     _setLoading(true);
     _clearError();
+
     try {
-      await _repository.updatePaymentMethod(_userId!, paymentMethod);
+      final paymentMethodWithUser = paymentMethod.copyWith(userId: resolvedUserId);
+      await _repository.updatePaymentMethod(resolvedUserId, paymentMethodWithUser);
       _logger.info("Método de pago actualizado.");
     } catch (e, stackTrace) {
       _logger.severe("Error al actualizar método de pago", e, stackTrace);
@@ -108,16 +138,20 @@ class PaymentMethodController extends ChangeNotifier {
     }
   }
 
-  // Eliminar método de pago
   Future<void> deletePaymentMethod(String docId) async {
-    if (_userId == null) {
+    final resolvedUserId = _userId ?? _auth.currentUser?.uid;
+
+    if (resolvedUserId == null) {
       _setError('Usuario no autenticado.');
       return;
     }
+
+    _userId = resolvedUserId;
     _setLoading(true);
     _clearError();
+
     try {
-      await _repository.deletePaymentMethod(_userId!, docId);
+      await _repository.deletePaymentMethod(resolvedUserId, docId);
       _logger.info("Método de pago eliminado.");
     } catch (e, stackTrace) {
       _logger.severe("Error al eliminar método de pago", e, stackTrace);
@@ -127,19 +161,16 @@ class PaymentMethodController extends ChangeNotifier {
     }
   }
 
-  // Métodos de gestión de estado
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
   }
 
-  // Métodos de gestión de errores
   void _setError(String? message) {
     _errorMessage = message;
     notifyListeners();
   }
 
-  // Métodos de gestión de datos
   void _clearError() {
     _errorMessage = null;
     notifyListeners();
