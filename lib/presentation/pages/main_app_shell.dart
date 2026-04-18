@@ -22,6 +22,7 @@ class MainAppShell extends StatefulWidget {
 
 class _MainAppShellState extends State<MainAppShell> {
   int _selectedIndex = 0;
+  late final List<Widget> _pages;
 
   static const List<String> _pageTitles = [
     'Panel de Inicio',
@@ -37,6 +38,16 @@ class _MainAppShellState extends State<MainAppShell> {
   @override
   void initState() {
     super.initState();
+    _pages = const [
+      HomePage(),
+      ProductListPage(),
+      OrderListPage(),
+      StatisticsPage(),
+      PromotionsPage(),
+      BusinessProfilePage(
+        key: ValueKey('business_profile_page'),
+      ),
+    ];
     _appBarActions = {
       4: [
         IconButton(
@@ -85,24 +96,10 @@ class _MainAppShellState extends State<MainAppShell> {
   }
 
   Widget _buildCurrentPage() {
-    switch (_selectedIndex) {
-      case 0:
-        return const HomePage();
-      case 1:
-        return const ProductListPage();
-      case 2:
-        return const OrderListPage();
-      case 3:
-        return const StatisticsPage();
-      case 4:
-        return const PromotionsPage();
-      case 5:
-        return const BusinessProfilePage(
-          key: ValueKey('business_profile_page'),
-        );
-      default:
-        return const HomePage();
-    }
+    return IndexedStack(
+      index: _selectedIndex,
+      children: _pages,
+    );
   }
 
   List<Widget> _buildAppBarActions() {
@@ -149,10 +146,6 @@ class _MainAppShellState extends State<MainAppShell> {
       ),
       body: _buildCurrentPage(),
       bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Colors.grey,
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         items: const [

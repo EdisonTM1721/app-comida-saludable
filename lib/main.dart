@@ -8,6 +8,7 @@ import 'package:logging/logging.dart';
 
 // Importaciones locales
 import 'firebase_options.dart';
+import 'package:emprendedor/core/theme/app_theme.dart';
 import 'package:emprendedor/presentation/controllers/product_controller.dart';
 import 'package:emprendedor/presentation/controllers/order_controller.dart';
 import 'package:emprendedor/presentation/controllers/stats_controller.dart';
@@ -16,6 +17,7 @@ import 'package:emprendedor/presentation/controllers/profile_controller.dart';
 import 'package:emprendedor/presentation/controllers/social_media_controller.dart';
 import 'package:emprendedor/presentation/controllers/payment_method_controller.dart';
 import 'package:emprendedor/presentation/pages/auth_wrapper.dart';
+import 'package:emprendedor/presentation/widgets/user_session_initializer.dart';
 
 final Logger logger = Logger('AppLogger');
 
@@ -109,26 +111,10 @@ class MyApp extends StatelessWidget {
         ],
         supportedLocales: const [Locale('es', 'ES')],
         locale: const Locale('es', 'ES'),
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.teal,
-            primary: Colors.teal,
-            secondary: Colors.amberAccent,
-          ),
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Colors.teal,
-            foregroundColor: Colors.white,
-            elevation: 2,
-            centerTitle: true,
-          ),
-          inputDecorationTheme: const InputDecorationTheme(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(8.0)),
-            ),
-          ),
+        theme: AppTheme.build(),
+        home: const UserSessionInitializer(
+          child: AuthWrapper(),
         ),
-        home: const AuthWrapper(),
       ),
     );
   }

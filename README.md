@@ -1,21 +1,30 @@
-<<<<<<< HEAD
-# emprendedor
+# Emprendedor
 
-Interfaz del emprendedor
+Aplicación Flutter orientada a un ecosistema de comida saludable con tres perfiles:
+emprendedor, cliente y nutricionista.
 
-## Getting Started
+## Qué incluye
 
-This project is a starting point for a Flutter application.
+- Gestión de productos, pedidos y promociones para emprendedores
+- Perfil y edición de datos por tipo de usuario
+- Integración con Firebase Authentication, Firestore y Storage
+- Panel de estadísticas y exportación de reportes
 
-A few resources to get you started if this is your first Flutter project:
+## Ejecutar el proyecto
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+```bash
+flutter pub get
+flutter run
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-=======
-# app-comida-saludable
-App Movil
->>>>>>> b326ca47d24381a7d4531386155fd8e7c0a2a169
+## Estructura principal
+
+- `lib/presentation/`: pantallas, controladores y widgets
+- `lib/data/`: modelos y repositorios
+- `lib/services/`: servicios auxiliares
+- `assets/`: iconos y tipografías
+
+## Requisitos
+
+- Flutter SDK compatible con `sdk: ^3.9.0`
+- Proyecto Firebase configurado para las plataformas que vayas a usar

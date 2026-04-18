@@ -40,23 +40,58 @@ class _ClientProfileEditPageState extends State<ClientProfileEditPage> {
 
     setState(() => _isSaving = true);
 
-    final profile = ClientProfileModel(
-      userId: user.uid,
-      name: _nameController.text.trim(),
-      role: 'cliente',
-      phone: _phoneController.text.trim(),
-      address: _addressController.text.trim(),
-      dietaryGoal: _goalController.text.trim(),
-      age: _ageController.text.trim(),
-    );
+    try {
+      final profile = ClientProfileModel(
+        userId: user.uid,
+        name: _nameController.text.trim(),
+        role: 'cliente',
+        phone: _phoneController.text.trim(),
+        address: _addressController.text.trim(),
+        dietaryGoal: _goalController.text.trim(),
+        age: _ageController.text.trim(),
+      );
 
-    await _repo.saveClientProfile(profile);
+      await _repo.saveClientProfile(profile);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const AuthWrapper()),
-          (route) => false,
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AuthWrapper()),
+            (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ocurrió un error al guardar el perfil: $e'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  InputDecoration _inputDecoration({
+    required String label,
+    required IconData icon,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      filled: true,
+      fillColor: Colors.grey.shade50,
     );
   }
 
@@ -64,54 +99,162 @@ class _ClientProfileEditPageState extends State<ClientProfileEditPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Completar Perfil de Cliente'),
+        title: const Text('Perfil del Cliente'),
+        centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Nombre completo'),
-                validator: (value) =>
-                value == null || value.trim().isEmpty ? 'Ingresa tu nombre' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _phoneController,
-                decoration: const InputDecoration(labelText: 'Teléfono'),
-                validator: (value) =>
-                value == null || value.trim().isEmpty ? 'Ingresa tu teléfono' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _addressController,
-                decoration: const InputDecoration(labelText: 'Dirección'),
-                validator: (value) =>
-                value == null || value.trim().isEmpty ? 'Ingresa tu dirección' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _goalController,
-                decoration: const InputDecoration(labelText: 'Objetivo alimenticio'),
-                validator: (value) =>
-                value == null || value.trim().isEmpty ? 'Ingresa tu objetivo' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _ageController,
-                decoration: const InputDecoration(labelText: 'Edad'),
-                validator: (value) =>
-                value == null || value.trim().isEmpty ? 'Ingresa tu edad' : null,
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _isSaving ? null : _saveProfile,
-                child: Text(_isSaving ? 'Guardando...' : 'Guardar Perfil'),
-              ),
-            ],
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.10),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(
+                            Icons.person_outline,
+                            color: Colors.blue,
+                            size: 30,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Completa tu perfil',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 6),
+                              Text(
+                                'Ingresa tu información para acceder a una experiencia más personalizada.',
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                TextFormField(
+                  controller: _nameController,
+                  decoration: _inputDecoration(
+                    label: 'Nombre completo',
+                    icon: Icons.badge_outlined,
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Ingresa tu nombre';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                TextFormField(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: _inputDecoration(
+                    label: 'Teléfono',
+                    icon: Icons.phone_outlined,
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Ingresa tu teléfono';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                TextFormField(
+                  controller: _addressController,
+                  decoration: _inputDecoration(
+                    label: 'Dirección',
+                    icon: Icons.location_on_outlined,
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Ingresa tu dirección';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                TextFormField(
+                  controller: _goalController,
+                  decoration: _inputDecoration(
+                    label: 'Objetivo alimenticio',
+                    icon: Icons.flag_outlined,
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Ingresa tu objetivo';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                TextFormField(
+                  controller: _ageController,
+                  keyboardType: TextInputType.number,
+                  decoration: _inputDecoration(
+                    label: 'Edad',
+                    icon: Icons.cake_outlined,
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Ingresa tu edad';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 28),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _isSaving ? null : _saveProfile,
+                    icon: _isSaving
+                        ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                        : const Icon(Icons.save_outlined),
+                    label: Text(_isSaving ? 'Guardando...' : 'Guardar perfil'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
