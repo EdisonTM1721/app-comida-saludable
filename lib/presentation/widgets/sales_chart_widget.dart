@@ -3,7 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:emprendedor/data/models/stats_model.dart';
-import 'package:emprendedor/presentation/controllers/stats_controller.dart';
+import 'package:emprendedor/presentation/controllers/entrepreneur/stats_controller.dart';
 
 // Nueva clase para el widget de gráfico de ventas
 class SalesChartWidget extends StatelessWidget {
