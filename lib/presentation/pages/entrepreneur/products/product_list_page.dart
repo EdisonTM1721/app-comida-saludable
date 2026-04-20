@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:emprendedor/presentation/controllers/entrepreneur/product_controller.dart';
-import 'package:emprendedor/presentation/widgets/category_filter_widget.dart';
-import 'package:emprendedor/presentation/widgets/product_list_item.dart';
+import 'package:emprendedor/presentation/shared/widgets/category_filter_widget.dart';
+import 'package:emprendedor/presentation/client/widgets/product_list_item.dart';
 import 'package:emprendedor/presentation/pages/entrepreneur/products/product_form_page.dart';
 // 👇 NUEVOS IMPORTS
-import 'package:emprendedor/presentation/widgets/common/app_empty_state.dart';
-import 'package:emprendedor/presentation/widgets/common/app_error_state.dart';
+import 'package:emprendedor/presentation/shared/widgets/common/app_empty_state.dart';
+import 'package:emprendedor/presentation/shared/widgets/common/app_error_state.dart';
 
 class ProductListPage extends StatelessWidget {
   const ProductListPage({super.key});

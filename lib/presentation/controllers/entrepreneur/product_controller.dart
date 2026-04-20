@@ -4,8 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:logging/logging.dart';
-import 'package:emprendedor/data/models/product_model.dart';
-import 'package:emprendedor/data/repositories/product_repository.dart';
+import 'package:emprendedor/data/models/entrepreneur/product_model.dart';
+import 'package:emprendedor/data/repositories/entrepreneur/product_repository.dart';
 
 class ProductController extends ChangeNotifier {
   final Logger _logger = Logger('ProductController');

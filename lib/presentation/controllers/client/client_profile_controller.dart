@@ -2,8 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 
-import 'package:emprendedor/data/models/client_profile_model.dart';
-import 'package:emprendedor/data/repositories/client_profile_repository.dart';
+import 'package:emprendedor/data/models/client/client_profile_model.dart';
+import 'package:emprendedor/data/repositories/client/client_profile_repository.dart';
 
 class ClientProfileController extends ChangeNotifier {
   final Logger _logger = Logger('ClientProfileController');

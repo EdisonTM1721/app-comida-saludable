@@ -2,8 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 
-import 'package:emprendedor/data/models/nutritionist_profile_model.dart';
-import 'package:emprendedor/data/repositories/nutritionist_profile_repository.dart';
+import 'package:emprendedor/data/models/nutritionist/nutritionist_profile_model.dart';
+import 'package:emprendedor/data/repositories/nutritionist/nutritionist_profile_repository.dart';
 
 class NutritionistProfileController extends ChangeNotifier {
   final Logger _logger = Logger('NutritionistProfileController');

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-import 'package:emprendedor/data/models/business_profile_model.dart';
-import 'package:emprendedor/data/models/client_profile_model.dart';
-import 'package:emprendedor/data/models/nutritionist_profile_model.dart';
+import 'package:emprendedor/data/models/entrepreneur/business_profile_model.dart';
+import 'package:emprendedor/data/models/client/client_profile_model.dart';
+import 'package:emprendedor/data/models/nutritionist/nutritionist_profile_model.dart';
 
-import 'package:emprendedor/data/repositories/business_profile_repository.dart';
-import 'package:emprendedor/data/repositories/client_profile_repository.dart';
-import 'package:emprendedor/data/repositories/nutritionist_profile_repository.dart';
+import 'package:emprendedor/data/repositories/entrepreneur/business_profile_repository.dart';
+import 'package:emprendedor/data/repositories/client/client_profile_repository.dart';
+import 'package:emprendedor/data/repositories/nutritionist/nutritionist_profile_repository.dart';
 
 class AuthController {
   final _businessRepo = BusinessProfileRepository();

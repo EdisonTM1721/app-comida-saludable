@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:emprendedor/data/models/product_model.dart';
-import 'package:emprendedor/data/repositories/product_repository.dart';
+import 'package:emprendedor/data/models/entrepreneur/product_model.dart';
+import 'package:emprendedor/data/repositories/entrepreneur/product_repository.dart';
 import 'package:emprendedor/presentation/controllers/client/cart_controller.dart';
 import 'package:emprendedor/presentation/pages/client/cart/cart_page.dart';
 

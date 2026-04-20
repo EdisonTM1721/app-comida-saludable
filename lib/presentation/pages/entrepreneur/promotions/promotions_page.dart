@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:emprendedor/presentation/controllers/entrepreneur/promotion_controller.dart';
-import 'package:emprendedor/data/models/promotion_model.dart';
+import 'package:emprendedor/data/models/entrepreneur/promotion_model.dart';
 import 'package:emprendedor/presentation/pages/entrepreneur/promotions/create_edit_promotion_page.dart';
 import 'package:emprendedor/presentation/pages/entrepreneur/promotions/create_coupon_page.dart';
-import 'package:emprendedor/presentation/widgets/common/app_empty_state.dart';
-import 'package:emprendedor/presentation/widgets/common/app_error_state.dart';
+import 'package:emprendedor/presentation/shared/widgets/common/app_empty_state.dart';
+import 'package:emprendedor/presentation/shared/widgets/common/app_error_state.dart';
 class PromotionsPage extends StatelessWidget {
   const PromotionsPage({super.key});
 

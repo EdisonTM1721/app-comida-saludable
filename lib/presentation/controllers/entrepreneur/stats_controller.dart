@@ -2,12 +2,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:logging/logging.dart';
-import 'package:emprendedor/data/models/stats_model.dart';
-import 'package:emprendedor/data/models/product_model.dart';
-import 'package:emprendedor/data/models/promotion_model.dart';
-import 'package:emprendedor/data/repositories/stats_repository.dart';
-import 'package:emprendedor/data/repositories/product_repository.dart';
-import 'package:emprendedor/data/repositories/promotion_repository.dart';
+import 'package:emprendedor/data/models/entrepreneur/stats_model.dart';
+import 'package:emprendedor/data/models/entrepreneur/product_model.dart';
+import 'package:emprendedor/data/models/entrepreneur/promotion_model.dart';
+import 'package:emprendedor/data/repositories/entrepreneur/stats_repository.dart';
+import 'package:emprendedor/data/repositories/entrepreneur/product_repository.dart';
+import 'package:emprendedor/data/repositories/entrepreneur/promotion_repository.dart';
 import 'package:emprendedor/data/services/report_exporter_service.dart';
 
 // Definición de la clase StatsController

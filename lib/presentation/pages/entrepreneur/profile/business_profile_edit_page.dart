@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:emprendedor/data/models/business_profile_model.dart';
+import 'package:emprendedor/data/models/entrepreneur/business_profile_model.dart';
 import 'package:emprendedor/presentation/pages/entrepreneur/home/main_app_shell.dart';
 
 enum NotificationType { success, error, warning, info }

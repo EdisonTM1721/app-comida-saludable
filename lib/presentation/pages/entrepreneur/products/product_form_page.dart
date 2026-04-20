@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:emprendedor/data/models/product_model.dart';
+import 'package:emprendedor/data/models/entrepreneur/product_model.dart';
 import 'package:emprendedor/presentation/controllers/entrepreneur/product_controller.dart';
 
 class ProductFormPage extends StatefulWidget {

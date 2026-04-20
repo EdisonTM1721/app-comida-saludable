@@ -3,9 +3,9 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:emprendedor/data/models/order_model.dart';
+import 'package:emprendedor/data/models/shared/order_model.dart';
 import 'package:emprendedor/presentation/controllers/entrepreneur/order_controller.dart';
-import 'package:emprendedor/presentation/widgets/update_order_status_dialog.dart';
+import 'package:emprendedor/presentation/entrepreneur/widgets/update_order_status_dialog.dart';
 
 class OrderDetailPage extends StatefulWidget {
   final String orderId;

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:emprendedor/presentation/controllers/entrepreneur/social_media_controller.dart';
-import 'package:emprendedor/data/models/social_media_model.dart';
+import 'package:emprendedor/data/models/entrepreneur/social_media_model.dart';
 
 // Página de redes sociales
 class SocialMediaPage extends StatelessWidget {

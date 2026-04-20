@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:logging/logging.dart';
-import 'package:emprendedor/data/models/payment_method_model.dart';
+import 'package:emprendedor/data/models/entrepreneur/payment_method_model.dart';
 
 //Importar FirebaseFirestore desde cloud_firestore
 final Logger _logger = Logger('PaymentMethodRepository');

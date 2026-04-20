@@ -2,8 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:logging/logging.dart';
-import 'package:emprendedor/data/repositories/payment_method_repository.dart';
-import 'package:emprendedor/data/models/payment_method_model.dart';
+import 'package:emprendedor/data/repositories/entrepreneur/payment_method_repository.dart';
+import 'package:emprendedor/data/models/entrepreneur/payment_method_model.dart';
 
 class PaymentMethodController extends ChangeNotifier {
   final Logger _logger = Logger('PaymentMethodController');

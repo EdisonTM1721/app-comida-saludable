@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:emprendedor/data/models/promotion_model.dart';
-import 'package:emprendedor/data/models/coupon_model.dart';
-import 'package:emprendedor/data/repositories/promotion_repository.dart';
+import 'package:emprendedor/data/models/entrepreneur/promotion_model.dart';
+import 'package:emprendedor/data/models/entrepreneur/coupon_model.dart';
+import 'package:emprendedor/data/repositories/entrepreneur/promotion_repository.dart';
 
 class PromotionController extends ChangeNotifier {
   final PromotionRepository _repository = PromotionRepository();

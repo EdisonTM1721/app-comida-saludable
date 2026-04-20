@@ -6,7 +6,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:open_filex/open_filex.dart';
 import 'package:printing/printing.dart';
-import 'package:emprendedor/data/models/stats_model.dart';
+import 'package:emprendedor/data/models/entrepreneur/stats_model.dart';
 
 // Nueva clase para el servicio de exportación de Excel
 class ReportExporterService {

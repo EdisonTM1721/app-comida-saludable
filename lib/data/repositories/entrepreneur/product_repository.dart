@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:emprendedor/core/constants/app_constants.dart';
-import 'package:emprendedor/data/models/product_model.dart';
+import 'package:emprendedor/data/models/entrepreneur/product_model.dart';
 import 'package:logging/logging.dart';
 
 class ProductRepository {

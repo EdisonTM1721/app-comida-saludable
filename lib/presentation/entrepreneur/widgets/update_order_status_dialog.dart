@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:emprendedor/data/models/order_model.dart';
+import 'package:emprendedor/data/models/shared/order_model.dart';
 import 'package:emprendedor/presentation/controllers/entrepreneur/order_controller.dart';
 
 class UpdateOrderStatusDialog extends StatefulWidget {

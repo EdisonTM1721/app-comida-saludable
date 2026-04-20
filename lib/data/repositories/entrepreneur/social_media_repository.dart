@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:logging/logging.dart';
-import 'package:emprendedor/data/models/social_media_model.dart';
+import 'package:emprendedor/data/models/entrepreneur/social_media_model.dart';
 
 final Logger _logger = Logger('SocialMediaRepository');
 

@@ -2,11 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import 'package:emprendedor/data/models/cart_item_model.dart';
-import 'package:emprendedor/data/models/order_model.dart';
-import 'package:emprendedor/data/models/product_model.dart';
-import 'package:emprendedor/data/models/user_model.dart';
-import 'package:emprendedor/data/repositories/order_repository.dart';
+import 'package:emprendedor/data/models/shared/cart_item_model.dart';
+import 'package:emprendedor/data/models/shared/order_model.dart';
+import 'package:emprendedor/data/models/entrepreneur/product_model.dart';
+import 'package:emprendedor/data/models/shared/user_model.dart';
+import 'package:emprendedor/data/repositories/shared/order_repository.dart';
 
 class CartController extends ChangeNotifier {
   final Map<String, CartItemModel> _items = {};

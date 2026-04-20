@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:emprendedor/presentation/pages/auth/login_page.dart';
 import 'package:emprendedor/presentation/pages/client/products/client_products_page.dart';
+import 'package:emprendedor/presentation/pages/client/orders/client_orders_page.dart';
 
 class ClienteHomePage extends StatelessWidget {
   const ClienteHomePage({super.key});
@@ -124,7 +125,14 @@ class ClienteHomePage extends StatelessWidget {
               iconColor: Colors.blue,
               title: 'Mis pedidos',
               subtitle: 'Consulta tus compras realizadas',
-              onTap: () {},
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ClientOrdersPage(),
+                  ),
+                );
+              },
             ),
             _buildOptionCard(
               icon: Icons.calendar_month,

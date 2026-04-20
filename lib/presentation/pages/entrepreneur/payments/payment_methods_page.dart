@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:emprendedor/data/models/payment_method_model.dart';
+import 'package:emprendedor/data/models/entrepreneur/payment_method_model.dart';
 import 'package:emprendedor/presentation/controllers/entrepreneur/payment_method_controller.dart';
 
 enum NotificationType { success, error, warning, info }

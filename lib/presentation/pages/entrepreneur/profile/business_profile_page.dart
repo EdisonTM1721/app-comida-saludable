@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:emprendedor/data/models/business_profile_model.dart';
-import 'package:emprendedor/data/repositories/business_profile_repository.dart';
+import 'package:emprendedor/data/models/entrepreneur/business_profile_model.dart';
+import 'package:emprendedor/data/repositories/entrepreneur/business_profile_repository.dart';
 
 class BusinessProfilePage extends StatefulWidget {
   const BusinessProfilePage({super.key});

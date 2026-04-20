@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
-import 'package:emprendedor/data/models/order_model.dart';
+import 'package:emprendedor/data/models/shared/order_model.dart';
 import 'package:emprendedor/presentation/pages/entrepreneur/orders/order_detail_page.dart';
-import 'package:emprendedor/presentation/widgets/update_order_status_dialog.dart';
+import 'package:emprendedor/presentation/entrepreneur/widgets/update_order_status_dialog.dart';
 
 class OrderListItem extends StatelessWidget {
   final OrderModel order;

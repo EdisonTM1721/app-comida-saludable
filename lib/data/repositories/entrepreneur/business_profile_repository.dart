@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:emprendedor/data/models/business_profile_model.dart';
+import 'package:emprendedor/data/models/entrepreneur/business_profile_model.dart';
 import 'package:logging/logging.dart';
 
 // Clase para el repositorio de perfiles de negocio

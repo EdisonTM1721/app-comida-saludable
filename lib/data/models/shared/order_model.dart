@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:emprendedor/data/models/user_model.dart';
+import 'package:emprendedor/data/models/shared/user_model.dart';
 
 enum OrderStatus {
   pending,

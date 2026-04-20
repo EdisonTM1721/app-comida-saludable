@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:emprendedor/core/constants/app_constants.dart';
-import 'package:emprendedor/data/models/order_model.dart';
+import 'package:emprendedor/data/models/shared/order_model.dart';
 import 'package:logging/logging.dart';
 
 final Logger logger = Logger('OrderRepository');

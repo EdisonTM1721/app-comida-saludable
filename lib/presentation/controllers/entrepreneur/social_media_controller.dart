@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
-import 'package:emprendedor/data/repositories/social_media_repository.dart';
-import 'package:emprendedor/data/models/social_media_model.dart';
+import 'package:emprendedor/data/repositories/entrepreneur/social_media_repository.dart';
+import 'package:emprendedor/data/models/entrepreneur/social_media_model.dart';
 
 // Clase para controlar los enlaces de redes sociales
 class SocialMediaController extends ChangeNotifier {

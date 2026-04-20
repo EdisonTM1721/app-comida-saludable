@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:emprendedor/data/models/stats_model.dart';
+import 'package:emprendedor/data/models/entrepreneur/stats_model.dart';
 import 'package:emprendedor/presentation/controllers/entrepreneur/stats_controller.dart';
-import 'package:emprendedor/presentation/widgets/sales_chart_widget.dart';
-import 'package:emprendedor/presentation/widgets/top_items_list_widget.dart';
-import 'package:emprendedor/presentation/widgets/common/app_empty_state.dart';
-import 'package:emprendedor/presentation/widgets/common/app_error_state.dart';
+import 'package:emprendedor/presentation/entrepreneur/widgets/sales_chart_widget.dart';
+import 'package:emprendedor/presentation/entrepreneur/widgets/top_items_list_widget.dart';
+import 'package:emprendedor/presentation/shared/widgets/common/app_empty_state.dart';
+import 'package:emprendedor/presentation/shared/widgets/common/app_error_state.dart';
 
 class StatisticsPage extends StatelessWidget {
   const StatisticsPage({super.key});

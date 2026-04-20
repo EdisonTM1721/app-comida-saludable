@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:emprendedor/data/models/promotion_model.dart';
+import 'package:emprendedor/data/models/entrepreneur/promotion_model.dart';
 import 'package:emprendedor/presentation/controllers/entrepreneur/promotion_controller.dart';
 
 class CreateEditPromotionPage extends StatefulWidget {

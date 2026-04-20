@@ -2,8 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 
-import 'package:emprendedor/data/models/order_model.dart';
-import 'package:emprendedor/data/repositories/order_repository.dart';
+import 'package:emprendedor/data/models/shared/order_model.dart';
+import 'package:emprendedor/data/repositories/shared/order_repository.dart';
 
 final Logger _logger = Logger('OrderController');
 

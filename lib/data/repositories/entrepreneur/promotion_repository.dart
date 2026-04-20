@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:logging/logging.dart';
 import 'package:emprendedor/core/constants/app_constants.dart';
-import 'package:emprendedor/data/models/promotion_model.dart';
-import 'package:emprendedor/data/models/coupon_model.dart';
+import 'package:emprendedor/data/models/entrepreneur/promotion_model.dart';
+import 'package:emprendedor/data/models/entrepreneur/coupon_model.dart';
 
 class PromotionRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;

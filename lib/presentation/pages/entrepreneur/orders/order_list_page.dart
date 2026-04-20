@@ -3,11 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:emprendedor/presentation/controllers/entrepreneur/order_controller.dart';
-import 'package:emprendedor/presentation/widgets/order_list_item.dart';
+import 'package:emprendedor/presentation/entrepreneur/widgets/order_list_item.dart';
 
 // 👇 NUEVOS IMPORTS
-import 'package:emprendedor/presentation/widgets/common/app_empty_state.dart';
-import 'package:emprendedor/presentation/widgets/common/app_error_state.dart';
+import 'package:emprendedor/presentation/shared/widgets/common/app_empty_state.dart';
+import 'package:emprendedor/presentation/shared/widgets/common/app_error_state.dart';
 
 class OrderListPage extends StatefulWidget {
   const OrderListPage({super.key});
