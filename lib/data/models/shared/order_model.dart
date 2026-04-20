@@ -73,22 +73,27 @@ class OrderItem {
 
   factory OrderItem.fromMap(Map<String, dynamic> map) {
     return OrderItem(
-      productId: map['productId'] ?? '',
-      productName: map['productName'] ?? '',
-      quantity: map['quantity'] ?? 0,
-      priceAtPurchase: (map['priceAtPurchase'] ?? 0.0).toDouble(),
-      imageUrl: map['imageUrl'],
+      productId: map['productId']?.toString() ?? '',
+      productName: map['productName']?.toString() ?? '',
+      quantity: (map['quantity'] as num?)?.toInt() ?? 0,
+      priceAtPurchase: (map['priceAtPurchase'] as num?)?.toDouble() ?? 0.0,
+      imageUrl: map['imageUrl']?.toString(),
     );
   }
 
   Map<String, dynamic> toMap() {
-    return {
+    final data = <String, dynamic>{
       'productId': productId,
       'productName': productName,
       'quantity': quantity,
       'priceAtPurchase': priceAtPurchase,
-      'imageUrl': imageUrl,
     };
+
+    if (imageUrl != null && imageUrl!.trim().isNotEmpty) {
+      data['imageUrl'] = imageUrl;
+    }
+
+    return data;
   }
 }
 
@@ -132,39 +137,48 @@ class OrderModel {
   });
 
   factory OrderModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+    final data = doc.data() as Map<String, dynamic>? ?? {};
 
     return OrderModel(
       id: doc.id,
       orderNumber: (data['orderNumber'] as num?)?.toInt(),
-      userId: data['userId'] ?? '',
-      businessUserId: data['businessUserId'] ?? '',
+      userId: data['userId']?.toString() ?? '',
+      businessUserId: data['businessUserId']?.toString() ?? '',
       items: (data['items'] as List<dynamic>?)
           ?.map(
-            (itemMap) =>
-            OrderItem.fromMap(itemMap as Map<String, dynamic>),
+            (itemMap) => OrderItem.fromMap(
+          Map<String, dynamic>.from(itemMap as Map),
+        ),
       )
           .toList() ??
           [],
-      totalPrice: (data['totalPrice'] ?? 0.0).toDouble(),
-      status: stringToOrderStatus(data['status']),
-      shippingAddress: data['shippingAddress'] ?? 'N/A',
-      paymentMethod: data['paymentMethod'] ?? 'No especificado',
+      totalPrice: (data['totalPrice'] as num?)?.toDouble() ?? 0.0,
+      status: stringToOrderStatus(data['status']?.toString()),
+      shippingAddress: data['shippingAddress']?.toString() ?? 'N/A',
+      paymentMethod: data['paymentMethod']?.toString() ?? 'No especificado',
       latitude: (data['latitude'] as num?)?.toDouble(),
       longitude: (data['longitude'] as num?)?.toDouble(),
       customerInfo: UserModel.fromEmbeddedData(
-        data['customerInfo'] as Map<String, dynamic>? ?? {},
+        Map<String, dynamic>.from(
+          (data['customerInfo'] as Map?) ?? <String, dynamic>{},
+        ),
       ),
-      createdAt: data['createdAt'] ?? Timestamp.now(),
-      updatedAt: data['updatedAt'],
-      deliveredAt: data['deliveredAt'],
-      couponId: data['couponId'],
-      isFeaturedProduct: data['isFeaturedProduct'],
+      createdAt: data['createdAt'] is Timestamp
+          ? data['createdAt'] as Timestamp
+          : Timestamp.now(),
+      updatedAt: data['updatedAt'] is Timestamp
+          ? data['updatedAt'] as Timestamp
+          : null,
+      deliveredAt: data['deliveredAt'] is Timestamp
+          ? data['deliveredAt'] as Timestamp
+          : null,
+      couponId: data['couponId']?.toString(),
+      isFeaturedProduct: data['isFeaturedProduct'] as bool?,
     );
   }
 
   Map<String, dynamic> toFirestore() {
-    return {
+    final data = <String, dynamic>{
       'orderNumber': orderNumber,
       'userId': userId,
       'businessUserId': businessUserId,
@@ -173,14 +187,41 @@ class OrderModel {
       'status': orderStatusToString(status),
       'shippingAddress': shippingAddress,
       'paymentMethod': paymentMethod,
-      'latitude': latitude,
-      'longitude': longitude,
       'customerInfo': customerInfo.toEmbeddedData(),
       'createdAt': createdAt,
-      'updatedAt': updatedAt,
-      'deliveredAt': deliveredAt,
-      'couponId': couponId,
-      'isFeaturedProduct': isFeaturedProduct,
     };
+
+    if (latitude != null) {
+      data['latitude'] = latitude;
+    }
+
+    if (longitude != null) {
+      data['longitude'] = longitude;
+    }
+
+    if (updatedAt != null) {
+      data['updatedAt'] = updatedAt;
+    }
+
+    if (deliveredAt != null) {
+      data['deliveredAt'] = deliveredAt;
+    }
+
+    if (couponId != null && couponId!.trim().isNotEmpty) {
+      data['couponId'] = couponId;
+    }
+
+    if (isFeaturedProduct != null) {
+      data['isFeaturedProduct'] = isFeaturedProduct;
+    }
+
+    return data;
   }
+
+  String get formattedOrderNumber {
+    if (orderNumber == null) return '#----';
+    return '#${orderNumber.toString().padLeft(4, '0')}';
+  }
+
+  bool get hasOrderNumber => orderNumber != null;
 }

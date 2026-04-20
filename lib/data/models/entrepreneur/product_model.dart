@@ -1,9 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// Definición de la enumeración ProductStatus
 enum ProductStatus { available, unavailable }
 
-// Extensión para la enumeración ProductStatus
 extension ProductStatusExtension on ProductStatus {
   String get displayName {
     switch (this) {
@@ -15,7 +13,6 @@ extension ProductStatusExtension on ProductStatus {
   }
 }
 
-// Definición de la clase ProductModel
 class ProductModel {
   final String? id;
   final String name;
@@ -29,7 +26,6 @@ class ProductModel {
   final double? approxCalories;
   final String? userId;
 
-  // Constructor de la clase
   ProductModel({
     this.id,
     required this.name,
@@ -44,27 +40,26 @@ class ProductModel {
     this.userId,
   });
 
-  // Factory constructor para crear una instancia desde un mapa
   factory ProductModel.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+
     return ProductModel(
       id: doc.id,
-      name: data['name'] as String? ?? '',
-      price: (data['price'] as num? ?? 0.0).toDouble(),
-      imageUrl: data['imageUrl'] as String?,
+      name: data['name']?.toString() ?? '',
+      price: (data['price'] as num?)?.toDouble() ?? 0.0,
+      imageUrl: data['imageUrl']?.toString(),
       status: (data['status'] as String? ?? 'unavailable') == 'available'
           ? ProductStatus.available
           : ProductStatus.unavailable,
-      category: data['category'] as String? ?? '',
-      description: data['description'] as String? ?? '',
+      category: data['category']?.toString() ?? '',
+      description: data['description']?.toString() ?? '',
       ingredients: List<String>.from(data['ingredients'] as List? ?? []),
       isFeatured: data['isFeatured'] as bool? ?? false,
       approxCalories: (data['approxCalories'] as num?)?.toDouble(),
-      userId: data['userId'] as String?,
+      userId: data['userId']?.toString(),
     );
   }
 
-  // Metodo para convertir la instancia en un mapa
   Map<String, dynamic> toFirestore() {
     return {
       'name': name,
@@ -93,7 +88,6 @@ class ProductModel {
     double? approxCalories,
     String? userId,
   }) {
-    // Si no se proporciona un id, usar el id actual
     return ProductModel(
       id: id ?? this.id,
       name: name ?? this.name,

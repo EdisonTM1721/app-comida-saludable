@@ -4,12 +4,26 @@ import 'package:emprendedor/presentation/controllers/entrepreneur/product_contro
 import 'package:emprendedor/presentation/shared/widgets/category_filter_widget.dart';
 import 'package:emprendedor/presentation/client/widgets/product_list_item.dart';
 import 'package:emprendedor/presentation/pages/entrepreneur/products/product_form_page.dart';
-// 👇 NUEVOS IMPORTS
 import 'package:emprendedor/presentation/shared/widgets/common/app_empty_state.dart';
 import 'package:emprendedor/presentation/shared/widgets/common/app_error_state.dart';
 
-class ProductListPage extends StatelessWidget {
+class ProductListPage extends StatefulWidget {
   const ProductListPage({super.key});
+
+  @override
+  State<ProductListPage> createState() => _ProductListPageState();
+}
+
+class _ProductListPageState extends State<ProductListPage> {
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await context.read<ProductController>().initUser();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,38 +34,31 @@ class ProductListPage extends StatelessWidget {
             children: [
               const CategoryFilterWidget(),
 
-              // 🔄 LOADING
               if (controller.isLoading)
                 const Padding(
                   padding: EdgeInsets.all(8.0),
                   child: LinearProgressIndicator(),
                 ),
 
-              // ❌ ERROR
               if (controller.errorMessage != null)
                 Expanded(
                   child: AppErrorState(
-                    message:
-                    'Error al cargar productos:\n${controller.errorMessage}',
-                    onRetry: () => controller.fetchProducts(),
+                    message: 'Error al cargar productos:\n${controller.errorMessage}',
+                    onRetry: () => controller.initUser(),
                   ),
                 )
-
-              // 📭 VACÍO
               else if (controller.products.isEmpty && !controller.isLoading)
                 const Expanded(
                   child: AppEmptyState(
                     icon: Icons.inventory_2_outlined,
                     title: 'No hay productos en esta categoría',
-                    message:
-                    'Prueba con otra categoría o agrega un producto nuevo.',
+                    message: 'Prueba con otra categoría o agrega un producto nuevo.',
                   ),
                 )
-
-              // 📋 LISTA
               else
                 Expanded(
                   child: ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 90),
                     itemCount: controller.products.length,
                     itemBuilder: (context, index) {
                       final product = controller.products[index];
@@ -64,7 +71,6 @@ class ProductListPage extends StatelessWidget {
         },
       ),
 
-      // ➕ BOTÓN
       floatingActionButton: FloatingActionButton.small(
         onPressed: () {
           Navigator.of(context).push(

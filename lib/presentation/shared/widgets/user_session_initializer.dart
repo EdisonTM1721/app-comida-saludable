@@ -9,6 +9,7 @@ import 'package:emprendedor/presentation/controllers/entrepreneur/profile_contro
 import 'package:emprendedor/presentation/controllers/entrepreneur/promotion_controller.dart';
 import 'package:emprendedor/presentation/controllers/entrepreneur/social_media_controller.dart';
 import 'package:emprendedor/presentation/controllers/entrepreneur/stats_controller.dart';
+import 'package:emprendedor/presentation/controllers/client/client_order_controller.dart';
 
 class UserSessionInitializer extends StatefulWidget {
   final Widget child;
@@ -46,6 +47,7 @@ class _UserSessionInitializerState extends State<UserSessionInitializer> {
       context.read<PromotionController>().setUserId(userId),
       context.read<SocialMediaController>().setUserId(userId),
       context.read<PaymentMethodController>().setUserId(userId),
+      context.read<ClientOrderController>().setUserId(userId),
     ]);
   }
 

@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -7,14 +8,43 @@ import 'package:emprendedor/presentation/controllers/entrepreneur/order_controll
 import 'package:emprendedor/presentation/controllers/entrepreneur/profile_controller.dart';
 import 'package:emprendedor/presentation/controllers/entrepreneur/stats_controller.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (!mounted || user == null) return;
+
+      final profileController = context.read<ProfileController>();
+      final orderController = context.read<OrderController>();
+      final statsController = context.read<StatsController>();
+
+      await Future.wait([
+        profileController.fetchBusinessProfile(),
+        orderController.setBusinessUserId(user.uid),
+        statsController.setUserId(user.uid),
+      ]);
+    });
+  }
+
   Future<void> _refreshDashboard(BuildContext context) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
     await Future.wait([
       context.read<ProfileController>().fetchBusinessProfile(),
-      context.read<OrderController>().fetchOrders(),
-      context.read<StatsController>().fetchStatistics(),
+      context.read<OrderController>().setBusinessUserId(user.uid),
+      context.read<StatsController>().setUserId(user.uid),
     ]);
   }
 
@@ -22,34 +52,45 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer3<ProfileController, OrderController, StatsController>(
       builder: (
-        context,
-        profileController,
-        orderController,
-        statsController,
-        child,
-      ) {
-        if (profileController.isLoading && !profileController.hasProfile) {
-          return const Center(child: CircularProgressIndicator());
+          context,
+          profileController,
+          orderController,
+          statsController,
+          child,
+          ) {
+        if ((profileController.isLoading && !profileController.hasProfile) ||
+            (orderController.isLoading && orderController.orders.isEmpty) ||
+            (statsController.isLoading &&
+                statsController.statisticsOverview == null)) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
         }
 
         final userName = profileController.businessProfile?.name;
         final greetingText =
-            userName?.isNotEmpty == true ? 'Hola, $userName' : 'Hola, Emprendedor';
+        userName?.isNotEmpty == true ? 'Hola, $userName' : 'Hola, Emprendedor';
+
         final statisticsOverview =
             statsController.statisticsOverview ?? StatisticsOverview.empty();
+
         final salesData = statisticsOverview.dailySales;
         final latestSales = salesData.isNotEmpty ? salesData.last : null;
+
         final topProduct = statisticsOverview.topProducts.isNotEmpty
             ? statisticsOverview.topProducts.first
             : null;
+
         final currencyFormatter = NumberFormat.currency(
           locale: 'es_ES',
           symbol: '\$',
           decimalDigits: 2,
         );
+
         final dateFormatter = DateFormat('dd MMM', 'es_ES');
+
         final visibleTopProducts =
-            statisticsOverview.topProducts.take(3).toList(growable: false);
+        statisticsOverview.topProducts.take(3).toList(growable: false);
 
         return RefreshIndicator(
           onRefresh: () => _refreshDashboard(context),
@@ -119,7 +160,7 @@ class HomeScreen extends StatelessWidget {
                 const _EmptyDashboardCard(
                   icon: Icons.trending_up_rounded,
                   message:
-                      'Todavía no hay suficientes pedidos entregados para detectar productos destacados.',
+                  'Todavía no hay suficientes pedidos entregados para detectar productos destacados.',
                 )
               else
                 Card(
@@ -131,18 +172,18 @@ class HomeScreen extends StatelessWidget {
                           .entries
                           .map(
                             (entry) => Padding(
-                              padding: EdgeInsets.only(
-                                top: entry.key == 0 ? 0 : 12,
-                              ),
-                              child: _TopProductRow(
-                                title: entry.value.productName,
-                                subtitle: '${entry.value.quantitySold} vendidos',
-                                amount: currencyFormatter
-                                    .format(entry.value.totalRevenue),
-                                compact: entry.key > 0,
-                              ),
-                            ),
-                          )
+                          padding: EdgeInsets.only(
+                            top: entry.key == 0 ? 0 : 12,
+                          ),
+                          child: _TopProductRow(
+                            title: entry.value.productName,
+                            subtitle: '${entry.value.quantitySold} vendidos',
+                            amount: currencyFormatter
+                                .format(entry.value.totalRevenue),
+                            compact: entry.key > 0,
+                          ),
+                        ),
+                      )
                           .toList(),
                     ),
                   ),

@@ -19,7 +19,9 @@ class OrderRepository {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => OrderModel.fromFirestore(doc)).toList();
+      return snapshot.docs
+          .map((doc) => OrderModel.fromFirestore(doc))
+          .toList();
     });
   }
 
@@ -30,11 +32,15 @@ class OrderRepository {
           .doc(orderId)
           .get();
 
-      if (doc.exists && doc.data()?['userId'] == userId) {
-        return OrderModel.fromFirestore(doc);
+      if (!doc.exists) return null;
+
+      final data = doc.data();
+
+      if (data == null || data['userId'] != userId) {
+        return null;
       }
 
-      return null;
+      return OrderModel.fromFirestore(doc);
     } catch (e, stackTrace) {
       logger.severe("Error fetching order by ID: $orderId", e, stackTrace);
       rethrow;
@@ -47,18 +53,19 @@ class OrderRepository {
       String userId,
       ) async {
     try {
-      final doc = await _firestore
+      final docRef = _firestore
           .collection(AppConstants.ordersCollection)
-          .doc(orderId)
-          .get();
+          .doc(orderId);
+
+      final doc = await docRef.get();
 
       if (!doc.exists || doc.data()?['userId'] != userId) {
         throw Exception(
-          "Pedido no encontrado o usuario no autorizado para actualizarlo.",
+          "Pedido no encontrado o usuario no autorizado.",
         );
       }
 
-      final Map<String, dynamic> updateData = {
+      final updateData = <String, dynamic>{
         'status': orderStatusToString(newStatus),
         'updatedAt': FieldValue.serverTimestamp(),
       };
@@ -67,13 +74,10 @@ class OrderRepository {
         updateData['deliveredAt'] = FieldValue.serverTimestamp();
       }
 
-      await _firestore
-          .collection(AppConstants.ordersCollection)
-          .doc(orderId)
-          .update(updateData);
+      await docRef.update(updateData);
     } catch (e, stackTrace) {
       logger.severe(
-        "Error updating order status for order ID: $orderId to $newStatus",
+        "Error updating order status: $orderId",
         e,
         stackTrace,
       );
@@ -92,7 +96,9 @@ class OrderRepository {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => OrderModel.fromFirestore(doc)).toList();
+      return snapshot.docs
+          .map((doc) => OrderModel.fromFirestore(doc))
+          .toList();
     });
   }
 
@@ -106,14 +112,18 @@ class OrderRepository {
           .doc(orderId)
           .get();
 
-      if (doc.exists && doc.data()?['businessUserId'] == businessUserId) {
-        return OrderModel.fromFirestore(doc);
+      if (!doc.exists) return null;
+
+      final data = doc.data();
+
+      if (data == null || data['businessUserId'] != businessUserId) {
+        return null;
       }
 
-      return null;
+      return OrderModel.fromFirestore(doc);
     } catch (e, stackTrace) {
       logger.severe(
-        "Error fetching business order by ID: $orderId",
+        "Error fetching business order: $orderId",
         e,
         stackTrace,
       );
@@ -127,18 +137,19 @@ class OrderRepository {
       String businessUserId,
       ) async {
     try {
-      final doc = await _firestore
+      final docRef = _firestore
           .collection(AppConstants.ordersCollection)
-          .doc(orderId)
-          .get();
+          .doc(orderId);
+
+      final doc = await docRef.get();
 
       if (!doc.exists || doc.data()?['businessUserId'] != businessUserId) {
         throw Exception(
-          "Pedido no encontrado o negocio no autorizado para actualizarlo.",
+          "Pedido no autorizado para este negocio.",
         );
       }
 
-      final Map<String, dynamic> updateData = {
+      final updateData = <String, dynamic>{
         'status': orderStatusToString(newStatus),
         'updatedAt': FieldValue.serverTimestamp(),
       };
@@ -147,13 +158,10 @@ class OrderRepository {
         updateData['deliveredAt'] = FieldValue.serverTimestamp();
       }
 
-      await _firestore
-          .collection(AppConstants.ordersCollection)
-          .doc(orderId)
-          .update(updateData);
+      await docRef.update(updateData);
     } catch (e, stackTrace) {
       logger.severe(
-        "Error updating business order status for order ID: $orderId to $newStatus",
+        "Error updating business order status: $orderId",
         e,
         stackTrace,
       );
@@ -162,38 +170,39 @@ class OrderRepository {
   }
 
   // =========================
-  // CREAR PEDIDO CON NUMERACIÓN PRO
+  // CREAR PEDIDO (NUMERACIÓN PRO CORREGIDA)
   // =========================
 
   Future<DocumentReference> addOrder(OrderModel order) async {
     try {
       final ordersRef = _firestore.collection(AppConstants.ordersCollection);
 
-      // Colección para llevar contador por negocio
       final countersRef = _firestore.collection('order_counters');
       final counterDocRef = countersRef.doc(order.businessUserId);
 
       return await _firestore.runTransaction((transaction) async {
         final counterSnapshot = await transaction.get(counterDocRef);
 
-        int nextOrderNumber = 1;
+        int currentLastNumber = 0;
 
         if (counterSnapshot.exists) {
-          final currentLastNumber =
-          (counterSnapshot.data()?['lastOrderNumber'] ?? 0) as int;
-          nextOrderNumber = currentLastNumber + 1;
+          currentLastNumber =
+              (counterSnapshot.data()?['lastOrderNumber'] as num?)
+                  ?.toInt() ??
+                  0;
         }
+
+        final nextOrderNumber = currentLastNumber + 1;
 
         final data = order.toFirestore();
 
+        // 🔥 FORZAMOS valores correctos SIEMPRE
         data['orderNumber'] = nextOrderNumber;
+        data['createdAt'] = FieldValue.serverTimestamp();
         data['updatedAt'] = FieldValue.serverTimestamp();
 
-        if (order.createdAt.seconds == 0) {
-          data['createdAt'] = FieldValue.serverTimestamp();
-        }
-
         final newOrderRef = ordersRef.doc();
+
         transaction.set(newOrderRef, data);
 
         transaction.set(
@@ -210,7 +219,7 @@ class OrderRepository {
       });
     } catch (e, stackTrace) {
       logger.severe(
-        "Error adding order for user ID: ${order.userId}",
+        "Error adding order for user: ${order.userId}",
         e,
         stackTrace,
       );
@@ -220,23 +229,19 @@ class OrderRepository {
 
   Future<void> deleteOrder(String orderId, String userId) async {
     try {
-      final orderDoc = await _firestore
+      final docRef = _firestore
           .collection(AppConstants.ordersCollection)
-          .doc(orderId)
-          .get();
+          .doc(orderId);
 
-      if (orderDoc.exists && orderDoc.data()?['userId'] == userId) {
-        await _firestore
-            .collection(AppConstants.ordersCollection)
-            .doc(orderId)
-            .delete();
-      } else {
-        throw Exception(
-          "Order not found or user not authorized to delete this order.",
-        );
+      final orderDoc = await docRef.get();
+
+      if (!orderDoc.exists || orderDoc.data()?['userId'] != userId) {
+        throw Exception("No autorizado para eliminar este pedido.");
       }
+
+      await docRef.delete();
     } catch (e, stackTrace) {
-      logger.severe("Error deleting order by ID: $orderId", e, stackTrace);
+      logger.severe("Error deleting order: $orderId", e, stackTrace);
       rethrow;
     }
   }

@@ -43,17 +43,20 @@ class CartController extends ChangeNotifier {
       );
     }
 
+    _clearError();
     notifyListeners();
   }
 
   void removeProduct(String productId) {
     _items.remove(productId);
+    _clearError();
     notifyListeners();
   }
 
   void increaseQuantity(String productId) {
     if (_items.containsKey(productId)) {
       _items[productId]!.quantity++;
+      _clearError();
       notifyListeners();
     }
   }
@@ -67,6 +70,7 @@ class CartController extends ChangeNotifier {
       _items.remove(productId);
     }
 
+    _clearError();
     notifyListeners();
   }
 
@@ -107,15 +111,25 @@ class CartController extends ChangeNotifier {
       return false;
     }
 
-    _setError(null);
     _setProcessing(true);
+    _setError(null);
 
     try {
       final firstProduct = _items.values.first;
-      final businessUserId = firstProduct.productOwnerId;
+      final businessUserId = firstProduct.productOwnerId?.trim();
 
-      if (businessUserId == null || businessUserId.trim().isEmpty) {
+      if (businessUserId == null || businessUserId.isEmpty) {
         throw Exception('No se pudo determinar el emprendedor del pedido.');
+      }
+
+      final hasMixedBusinesses = _items.values.any(
+            (item) => (item.productOwnerId?.trim() ?? '') != businessUserId,
+      );
+
+      if (hasMixedBusinesses) {
+        throw Exception(
+          'Solo puedes confirmar productos de un mismo emprendedor por pedido.',
+        );
       }
 
       final orderItems = _items.values.map((item) {
@@ -140,8 +154,10 @@ class CartController extends ChangeNotifier {
         longitude: longitude,
         customerInfo: UserModel(
           id: user.uid,
-          name: customerName.trim(),
-          email: customerEmail.trim(),
+          name: customerName.trim().isEmpty ? 'Cliente' : customerName.trim(),
+          email: customerEmail.trim().isEmpty
+              ? 'sin-correo@local.app'
+              : customerEmail.trim(),
           phoneNumber: customerPhone?.trim().isEmpty == true
               ? null
               : customerPhone?.trim(),
@@ -154,8 +170,25 @@ class CartController extends ChangeNotifier {
       clearCart();
       _setProcessing(false);
       return true;
-    } catch (e) {
-      _setError('No se pudo confirmar el pedido.');
+    } on FirebaseException catch (e) {
+      debugPrint(
+        'FirebaseException confirmOrder: code=${e.code}, message=${e.message}',
+      );
+
+      _setError(
+        e.message?.trim().isNotEmpty == true
+            ? e.message!
+            : 'Ocurrió un error con Firestore (${e.code}).',
+      );
+      _setProcessing(false);
+      return false;
+    } catch (e, stackTrace) {
+      debugPrint('Error confirmOrder: $e');
+      debugPrintStack(stackTrace: stackTrace);
+
+      _setError(
+        e.toString().replaceFirst('Exception: ', ''),
+      );
       _setProcessing(false);
       return false;
     }
@@ -171,5 +204,10 @@ class CartController extends ChangeNotifier {
     if (_errorMessage == value) return;
     _errorMessage = value;
     notifyListeners();
+  }
+
+  void _clearError() {
+    if (_errorMessage == null) return;
+    _errorMessage = null;
   }
 }

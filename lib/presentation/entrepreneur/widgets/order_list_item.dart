@@ -19,13 +19,18 @@ class OrderListItem extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: InkWell(
         onTap: order.id == null
             ? null
             : () {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (context) => OrderDetailPage(orderId: order.id!),
+              builder: (context) =>
+                  OrderDetailPage(orderId: order.id!),
             ),
           );
         },
@@ -35,13 +40,13 @@ class OrderListItem extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Cabecera
+              // 🔥 CABECERA
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
                     child: Text(
-                      'Pedido #${(order.orderNumber ?? 0).toString().padLeft(4, '0')}',
+                      'Pedido ${order.formattedOrderNumber}',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -58,23 +63,25 @@ class OrderListItem extends StatelessWidget {
                       ),
                     ),
                     backgroundColor: statusColor,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
 
+              const SizedBox(height: 10),
+
+              // 👤 CLIENTE
               Text(
                 'Cliente: ${order.customerInfo.name}',
                 style: const TextStyle(fontSize: 14),
               ),
+
+              // 📍 DIRECCIÓN
               Text(
                 'Dirección: ${order.shippingAddress}',
                 style: const TextStyle(fontSize: 14),
               ),
+
+              // 💳 PAGO
               Text(
                 'Pago: ${order.paymentMethod}',
                 style: const TextStyle(fontSize: 14),
@@ -82,9 +89,9 @@ class OrderListItem extends StatelessWidget {
 
               if (order.latitude != null && order.longitude != null)
                 const Padding(
-                  padding: EdgeInsets.only(top: 2),
+                  padding: EdgeInsets.only(top: 4),
                   child: Text(
-                    'Ubicación disponible',
+                    '📍 Ubicación disponible',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.green,
@@ -93,10 +100,11 @@ class OrderListItem extends StatelessWidget {
                   ),
                 ),
 
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
 
+              // 🛒 PRODUCTOS
               Text(
-                'Productos: ${order.items.map((item) => item.productName).join(', ')}',
+                'Productos: ${order.items.map((e) => e.productName).join(', ')}',
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -104,18 +112,22 @@ class OrderListItem extends StatelessWidget {
                   color: Colors.grey[700],
                 ),
               ),
-              const SizedBox(height: 4),
 
+              const SizedBox(height: 6),
+
+              // 💰 TOTAL
               Text(
                 'Total: \$${order.totalPrice.toStringAsFixed(2)}',
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
                   color: Theme.of(context).colorScheme.primary,
                 ),
               ),
+
               const SizedBox(height: 8),
 
+              // 📅 FECHA
               Text(
                 'Fecha: ${dateFormat.format(order.createdAt.toDate())}',
                 style: TextStyle(
@@ -123,8 +135,10 @@ class OrderListItem extends StatelessWidget {
                   color: Colors.grey[600],
                 ),
               ),
+
               const SizedBox(height: 12),
 
+              // 🔧 BOTÓN
               Align(
                 alignment: Alignment.centerRight,
                 child: ElevatedButton.icon(
@@ -133,7 +147,7 @@ class OrderListItem extends StatelessWidget {
                   onPressed: order.id == null
                       ? null
                       : () async {
-                    await showDialog<bool>(
+                    await showDialog(
                       context: context,
                       builder: (context) {
                         return UpdateOrderStatusDialog(
@@ -143,12 +157,6 @@ class OrderListItem extends StatelessWidget {
                       },
                     );
                   },
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                  ),
                 ),
               ),
             ],
@@ -174,6 +182,8 @@ class OrderListItem extends StatelessWidget {
   }
 
   Color _getTextColorForBackground(Color bgColor) {
-    return bgColor.computeLuminance() > 0.5 ? Colors.black : Colors.white;
+    return bgColor.computeLuminance() > 0.5
+        ? Colors.black
+        : Colors.white;
   }
 }
