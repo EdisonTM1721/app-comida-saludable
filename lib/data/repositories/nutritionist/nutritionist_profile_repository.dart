@@ -13,6 +13,13 @@ class NutritionistProfileRepository {
         .doc(profile.userId)
         .set(profile.toMap());
   }
+  Future<List<NutritionistProfileModel>> getAllNutritionists() async {
+    final snapshot = await _firestore.collection(_collection).get();
+
+    return snapshot.docs
+        .map((doc) => NutritionistProfileModel.fromMap(doc.data(), doc.id))
+        .toList();
+  }
 
   Future<NutritionistProfileModel?> getNutritionistProfile(String userId) async {
     final doc = await _firestore.collection(_collection).doc(userId).get();

@@ -20,8 +20,14 @@ class ClientProfileController extends ChangeNotifier {
   bool _isSaving = false;
   bool get isSaving => _isSaving;
 
+  bool _isLoading = false;
+  bool get isLoading => _isLoading;
+
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
+
+  ClientProfileModel? _profile;
+  ClientProfileModel? get profile => _profile;
 
   void loadInitialData(ClientProfileModel? profile) {
     nameController.text = profile?.name ?? '';
@@ -31,10 +37,46 @@ class ClientProfileController extends ChangeNotifier {
     ageController.text = profile?.age ?? '';
   }
 
+  Future<void> loadProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      _setError('No hay usuario autenticado.');
+      return;
+    }
+
+    _setLoading(true);
+    _setError(null);
+
+    try {
+      final profile = await _repository.getClientProfile(user.uid);
+      _profile = profile;
+      loadInitialData(profile);
+      _setLoading(false);
+    } catch (e) {
+      _logger.severe('Error cargando perfil cliente', e);
+      _setError('Error al cargar el perfil.');
+      _setLoading(false);
+    }
+  }
+
   String? validateRequired(String? value, String field) {
     if (value == null || value.trim().isEmpty) {
       return 'Ingresa $field';
     }
+    return null;
+  }
+
+  String? validateAge(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Ingresa tu edad';
+    }
+
+    final age = int.tryParse(value.trim());
+    if (age == null || age <= 0 || age > 120) {
+      return 'Ingresa una edad válida';
+    }
+
     return null;
   }
 
@@ -52,6 +94,7 @@ class ClientProfileController extends ChangeNotifier {
 
     try {
       final profile = ClientProfileModel(
+        id: user.uid,
         userId: user.uid,
         name: nameController.text.trim(),
         role: 'cliente',
@@ -63,12 +106,13 @@ class ClientProfileController extends ChangeNotifier {
 
       await _repository.saveClientProfile(profile);
 
+      _profile = profile;
       _logger.info('Perfil cliente guardado');
       _setSaving(false);
       return true;
     } catch (e) {
       _logger.severe('Error guardando perfil cliente', e);
-      _setError('Error al guardar perfil');
+      _setError('Error al guardar el perfil');
       _setSaving(false);
       return false;
     }
@@ -83,6 +127,12 @@ class ClientProfileController extends ChangeNotifier {
   void _setSaving(bool value) {
     if (_isSaving == value) return;
     _isSaving = value;
+    notifyListeners();
+  }
+
+  void _setLoading(bool value) {
+    if (_isLoading == value) return;
+    _isLoading = value;
     notifyListeners();
   }
 
